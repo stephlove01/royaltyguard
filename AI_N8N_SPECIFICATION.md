@@ -1,10 +1,12 @@
 # RoyaltyGuard — AI & n8n Workflow Specification
 
+Capstone demo: simulated platform CSV statements, fictional rates in MySQL, no live streaming APIs, no payment processing.
+
 ## 1. Purpose
 
-n8n coordinates external integrations and asynchronous automation.
+n8n coordinates **ingestion and automation** (extract, normalize orchestration, AI drafting, email after approval).
 
-The backend and database remain the core application/system of record.
+The **backend** owns deterministic royalty calculation and discrepancy detection. The backend and database remain the system of record.
 
 ## 2. Main Workflow
 
@@ -19,21 +21,19 @@ Validate Structure
   ↓
 Normalize Data
   ↓
-Get Royalty Rate
-  ↓
-Calculate Expected Royalty
-  ↓
-Compare Actual vs Expected
+HTTP → Backend (rate lookup, audit, calculate, compare)
   ↓
 IF Discrepancy
   ├── No → Complete Audit
   └── Yes
         ↓
-      Generate Dispute Draft
+      AI → Generate Dispute Draft (optional)
         ↓
-      Save Draft
+      HTTP → Save Draft (status: draft)
         ↓
-      Send Email / Await Approval
+      Await User Review & Explicit Send (backend API)
+        ↓
+      Gmail → Send (after approval only)
         ↓
       Track Response
         ↓
@@ -44,23 +44,20 @@ IF Discrepancy
 
 ## 3. Trigger
 
-Possible MVP trigger:
-- Backend webhook after statement upload.
+**MVP trigger:** backend notifies n8n after statement upload (e.g. webhook URL configured in environment).
 
-Alternative:
-- Google Drive trigger when a statement is placed in a configured folder.
+Statements are **fictional CSV files** representing simulated platforms (Spotify, Apple Music, YouTube Music, Audiomack)—see `sample-data/`.
 
-The selected trigger must create an idempotent processing record.
+Google Drive triggers are **out of MVP scope** (future enhancement).
+
+The trigger must create an idempotent processing record.
 
 ## 4. Extraction
 
 For CSV:
 - Parse rows directly.
 
-For PDF:
-- Extract text/table content.
-- Send only required structured content to the AI extraction step.
-- Validate output.
+PDF support is a **post-MVP** extension; capstone focuses on CSV.
 
 ## 5. AI Extraction Schema
 
@@ -98,32 +95,22 @@ Canonical schema must be documented and stable.
 
 ## 7. Royalty Rate Lookup
 
-The workflow calls the configured rate source.
+n8n calls the **backend** (which reads demo rates from MySQL). Do not hard-code rates in n8n workflows as authoritative values.
 
-Required output:
+Example demo platform rates (seed data only): Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002.
 
-```json
-{
-  "rate": 0.004,
-  "currency": "USD",
-  "source": "configured_demo_rate_source"
-}
-```
-
-The system must record the source and effective date.
-
-Do not present demo/mock rates as real contractual platform rates.
+Do not present demo rates as real contractual platform rates.
 
 ## 8. Deterministic Calculation
 
-Use a Code node or backend calculation service.
+**Must run in the backend**, not in an n8n Code node and not in an LLM.
 
 ```text
 expected = eligibleUnits × rate
 difference = expected - actual
 ```
 
-The calculation must be reproducible.
+n8n invokes backend audit endpoints and persists results via API. LLMs must never independently calculate financial results.
 
 ## 9. Discrepancy Rule
 
@@ -158,7 +145,7 @@ AI must not invent facts.
 
 ## 11. Email
 
-Gmail sends the approved dispute.
+Gmail sends the dispute **only after** the user reviews the draft and explicitly triggers send (backend coordinates n8n/Gmail).
 
 Record:
 - recipient
@@ -177,7 +164,13 @@ After the configured waiting period:
 
 For development, use a short test delay rather than 30 real days.
 
-## 13. Error Handling
+## 13. Webhook Security (MVP)
+
+Inbound webhooks from n8n to the backend must include a **shared secret** (e.g. `X-Webhook-Secret` header matching `N8N_WEBHOOK_SECRET`). Reject requests with missing or invalid secrets.
+
+Keep this mechanism simple and documented for capstone reviewers.
+
+## 14. Error Handling
 
 Each major step should define:
 - Validation failure.
@@ -186,7 +179,7 @@ Each major step should define:
 - Recovery behavior.
 - Duplicate-event handling.
 
-## 14. AI Safety Rules
+## 15. AI Safety Rules
 
 AI must not:
 - invent rates.
@@ -202,21 +195,21 @@ AI may:
 - summarize.
 - draft correspondence.
 
-## 15. n8n Node Naming
+## 16. n8n Node Naming
 
 Use descriptive names:
 
 ```text
 Webhook - Statement Uploaded
 HTTP - Get Statement
-Extract - Parse Statement
-AI - Extract Royalty Data
-Code - Validate & Normalize
-HTTP - Get Royalty Rate
-Code - Calculate Expected Royalty
-IF - Discrepancy Threshold
+Extract - Parse CSV Statement
+AI - Extract Royalty Data (optional)
+HTTP - Submit Normalized Rows
+HTTP - Run Backend Audit
+IF - Discrepancy Threshold (from backend response)
 AI - Draft Dispute
-HTTP - Save Dispute
+HTTP - Save Dispute Draft
+Wait - User Send (or HTTP triggered after POST .../send)
 Gmail - Send Dispute
 Wait - Follow Up
 Gmail - Search Response

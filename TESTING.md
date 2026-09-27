@@ -1,5 +1,7 @@
 # RoyaltyGuard — Testing Strategy
 
+Tests use **fictional** statements, rates, and amounts from `sample-data/` and database seeds. Verify the system does not treat demo rates as real platform payouts and does not perform real payment processing.
+
 ## 1. Testing Pyramid
 
 ```text
@@ -29,6 +31,9 @@ Example:
 ## 3. API Tests
 
 Test:
+- registration and login (JWT)
+- protected routes without token (401)
+- n8n webhooks without or with wrong shared secret (401/403)
 - statement creation
 - statement retrieval
 - audit retrieval
@@ -63,17 +68,18 @@ Test:
 
 ## 6. E2E Test
 
-Primary happy path:
+Primary happy path (e.g. fictional `sample-data/spotify_statement.csv`):
 
 ```text
-Upload CSV
- → Process
- → Audit
+Login
+ → Upload simulated platform CSV
+ → n8n ingestion
+ → Backend audit on dashboard
  → Detect discrepancy
- → Generate dispute
- → Review
- → Send
- → Track
+ → AI dispute draft (optional)
+ → User review
+ → User explicitly sends
+ → Track status
 ```
 
 ## 7. Financial Test Cases
@@ -96,8 +102,14 @@ Verify:
 - required fields are returned
 - invalid outputs are rejected
 - AI does not invent missing values
-- AI does not alter verified calculations
+- AI does not alter verified calculations or compute royalty totals independently
 - malformed JSON is handled
+
+## 8.1 Out of Scope for Tests
+
+- Payment gateway integration
+- Live streaming platform APIs
+- Real money movement
 
 ## 9. Definition of Test Success
 

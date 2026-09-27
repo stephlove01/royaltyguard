@@ -1,5 +1,7 @@
 # RoyaltyGuard — System Architecture
 
+RoyaltyGuard is a **capstone demo**: fictional financial data, simulated streaming platforms (CSV statements only), no real payments, no live platform APIs.
+
 ## 1. Architecture Overview
 
 RoyaltyGuard uses a full-stack architecture with clear separation between the user interface, application API, database and automation layer.
@@ -13,7 +15,7 @@ RoyaltyGuard uses a full-stack architecture with clear separation between the us
                ▼
 ┌──────────────────────────────┐
 │     Node.js + Express API    │
-│ Auth / Validation / Business │
+│ Auth / Audit Engine / Math   │
 └──────────────┬───────────────┘
                │
                ▼
@@ -26,10 +28,14 @@ RoyaltyGuard uses a full-stack architecture with clear separation between the us
 ┌──────────────┴───────────────┐
 │             n8n              │
 │ Orchestration / Integrations │
-└──────┬────────┬────────┬─────┘
-       │        │        │
-    Drive      AI      Gmail
+└──────┬────────┬──────────────┘
+       │        │
+      AI      Gmail
+       │
+   Backend REST (audit, rates, persist)
 ```
+
+Statement files for MVP are stored on the **local filesystem** (paths recorded in MySQL).
 
 ## 2. Components
 
@@ -57,7 +63,8 @@ Responsibilities:
 - Authentication/authorization.
 - Database access.
 - Business rules that belong in the application layer.
-- File metadata management.
+- Local filesystem upload storage.
+- **Deterministic royalty calculation and discrepancy detection** (single source of truth for math).
 - n8n integration endpoints/webhooks where required.
 
 ### Database
@@ -79,10 +86,9 @@ n8n is the automation/orchestration layer.
 Responsibilities:
 - Receive triggers.
 - Coordinate external services.
-- Invoke AI extraction/generation.
-- Call backend APIs.
-- Perform deterministic calculation steps where appropriate.
-- Send Gmail messages.
+- Invoke AI extraction/generation (non-authoritative for money).
+- Parse/ingest statement data and call **backend audit APIs** for rate lookup, calculation, and persistence.
+- Send Gmail messages **only after the user explicitly approves send** (typically triggered via backend → n8n).
 - Schedule follow-ups.
 - Handle retryable workflow failures.
 
@@ -100,31 +106,24 @@ AI must not be the source of truth for financial arithmetic.
 ### Statement Audit
 
 ```text
-User
+User uploads simulated platform CSV
  ↓
-Frontend
+Frontend → POST /api/statements
  ↓
-POST /api/statements
+Backend stores file (local) + metadata → MySQL
  ↓
-Backend
+n8n trigger (ingestion)
  ↓
-MySQL
+Extract / Normalize (n8n; AI optional)
  ↓
-n8n trigger
+Backend Audit Engine
+   ├── Rate lookup (MySQL demo rates)
+   ├── Deterministic calculation
+   └── Discrepancy detection
  ↓
-Extract
+MySQL (rows, audit, discrepancies)
  ↓
-Normalize
- ↓
-Rate Lookup
- ↓
-Deterministic Calculation
- ↓
-Discrepancy Detection
- ↓
-MySQL
- ↓
-Frontend Dashboard
+Frontend dashboard
 ```
 
 ### Dispute
@@ -132,26 +131,26 @@ Frontend Dashboard
 ```text
 Discrepancy
  ↓
-n8n
+AI draft (optional) → saved as draft in MySQL
  ↓
-AI Draft
+User reviews draft in UI
  ↓
-Backend / Database
+User explicitly triggers send (API)
  ↓
-User Review
+n8n / Gmail
  ↓
-Gmail
- ↓
-Dispute Status
+Dispute status updated
 ```
 
 ## 4. Integration Boundaries
 
-External systems:
-- Google Drive
-- Gmail
-- AI provider
-- Royalty-rate API/source
+**MVP external systems:**
+- Gmail (dispute email demo)
+- AI provider (extraction, classification, dispute drafting)
+
+**Not MVP:** live streaming platform APIs, payment gateways, Google Drive (optional future enhancement).
+
+Demo royalty rates live in **MySQL**, read by the backend during audits.
 
 All external integrations must be isolated behind configurable credentials and integration modules/workflows.
 
@@ -179,6 +178,8 @@ Examples:
 
 - Frontend receives public API data only.
 - Backend owns database credentials.
+- **Authentication:** email + password (hashed) + JWT for API access; no OAuth for MVP.
+- **n8n webhooks:** simple shared-secret validation (e.g. header checked against `N8N_WEBHOOK_SECRET`)—beginner-friendly, no complex auth infrastructure.
 - n8n credentials are stored in n8n credential storage/environment configuration.
 - Secrets are never committed to Git.
 - Sensitive data should not be unnecessarily included in AI prompts.
@@ -187,4 +188,4 @@ Examples:
 
 Use the simplest architecture that satisfies the requirement.
 
-Do not add Redis, Docker, LangChain, LangGraph, microservices or other infrastructure unless a concrete requirement justifies it.
+Do not add Redis, Kubernetes, LangChain, LangGraph, microservices, complex event buses, or unnecessary cloud infrastructure unless a concrete requirement justifies it.

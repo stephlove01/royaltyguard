@@ -1,5 +1,7 @@
 # RoyaltyGuard — Implementation Plan
 
+**Capstone:** fictional demo data, simulated streaming CSVs, backend-owned math, local file storage, simple JWT auth, n8n for ingestion/automation—not for authoritative calculations.
+
 ## 1. Implementation Strategy
 
 Build vertically in small, testable increments.
@@ -45,21 +47,24 @@ Tasks:
 - Create tables.
 - Add relationships.
 - Add indexes.
-- Seed development data.
+- Seed development data (demo royalty rates; fictional artists).
+- Plan `sample-data/` CSVs (Spotify, Apple Music, YouTube Music, Audiomack).
 
 Exit criteria:
 - Database schema can be recreated from migrations.
+- Demo rates seeded and labeled as non-official.
 
 ## Phase 3 — Backend Foundation
 
 Tasks:
 - Express application.
-- Configuration.
+- Configuration (including upload directory, JWT, webhook secret).
 - Error middleware.
 - Validation.
 - Health endpoint.
 - Database connection.
 - Logging.
+- Authentication (register, login, password hash, JWT middleware).
 
 Exit criteria:
 - `GET /api/health` works.
@@ -82,7 +87,7 @@ Exit criteria:
 
 Tasks:
 - Statement model.
-- Upload endpoint.
+- Upload endpoint (local filesystem storage).
 - File metadata.
 - Statement list.
 - Statement detail page.
@@ -107,17 +112,15 @@ Exit criteria:
 ## Phase 7 — n8n Automation
 
 Tasks:
-- Create webhook trigger.
-- Connect backend.
-- Extract data.
-- Normalize.
-- Call rate source.
-- Calculate.
-- Store results.
-- Handle errors.
+- Create webhook trigger after upload.
+- Connect backend (shared-secret webhooks).
+- Extract/normalize CSV (AI optional).
+- **Call backend audit API** for rate lookup, calculation, discrepancy detection.
+- Store results via backend API.
+- Handle errors and idempotency.
 
 Exit criteria:
-- End-to-end statement-to-audit workflow works.
+- End-to-end simulated-platform CSV → audit on dashboard works without n8n performing royalty math.
 
 ## Phase 8 — AI Integration
 
@@ -136,7 +139,7 @@ Exit criteria:
 Tasks:
 - Dispute API.
 - Draft UI.
-- Gmail integration.
+- Gmail integration (send only after user approval).
 - Send tracking.
 - Follow-up state.
 - Escalation.
@@ -171,7 +174,7 @@ Tasks:
 - Secrets review.
 - Input validation.
 - Authentication/authorization.
-- Webhook authentication.
+- Webhook shared-secret authentication.
 - File validation.
 - Rate limiting where appropriate.
 

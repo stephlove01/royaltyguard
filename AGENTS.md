@@ -2,16 +2,16 @@
 
 ## 1. Project Context
 
-RoyaltyGuard is a full-stack AI-powered music royalty audit and dispute automation system.
+RoyaltyGuard is a **capstone/demo** full-stack music royalty audit and dispute automation system. All artists, statements, rates, and payment amounts are **fictional** unless explicitly labeled otherwise. **No real payments** and **no live streaming platform APIs.**
 
 Stack:
 - React + TypeScript + Vite
 - Node.js + Express + TypeScript
-- MySQL
-- n8n
-- AI/LLM integrations
-- Gmail
-- Google Drive
+- MySQL (demo royalty rates)
+- n8n (ingestion/automation—not authoritative math)
+- AI/LLM (extract, classify, draft only)
+- Gmail (after user approves dispute send)
+- Local filesystem (MVP statement storage)
 
 ## 2. Architecture Rules
 
@@ -19,8 +19,11 @@ Stack:
 - Backend owns database access.
 - n8n owns workflow orchestration.
 - MySQL is the system of record.
+- **Backend** must perform all deterministic royalty calculations and discrepancy detection.
+- n8n and LLMs must not independently calculate financial results.
 - AI must not perform authoritative financial calculations.
 - External integrations must be configurable.
+- Do not add payment gateways, OAuth (MVP), Redis, Kubernetes, or live streaming APIs unless explicitly approved.
 
 ## 3. Before Coding
 

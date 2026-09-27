@@ -1,49 +1,52 @@
 # RoyaltyGuard
 
-**AI-Powered Music Royalty Audit & Dispute System**
+**AI-Powered Music Royalty Audit & Dispute System (Capstone Demo)**
 
-RoyaltyGuard is a full-stack application that automates the process of reviewing royalty statements, calculating expected royalties, detecting potential discrepancies and managing dispute follow-up.
+RoyaltyGuard is a full-stack **demonstration** application that automates reviewing **fictional** royalty statements, calculating expected royalties, detecting discrepancies, and managing dispute follow-up. It does **not** process real payments or connect to live streaming APIs.
+
+## Capstone Notice
+
+All artists, tracks, rates, statements, and payment figures are **demo/fake data** for education and demonstration. Demo rates are **not** official platform payout rates.
 
 ## Architecture
 
 ```text
 React Frontend
       ↓
-Node + Express Backend
+Node + Express Backend  ← deterministic audit & royalty math
       ↓
-MySQL
+MySQL  (demo rates, statements, audits)
       ↕
 n8n Automation
-   ├── AI
-   ├── Google Drive
-   ├── Gmail
-   └── Royalty Rate Source
+   ├── AI (extract / draft)
+   ├── Gmail (after user approves send)
+   └── Backend API (normalization, audit, persist)
 ```
+
+Local filesystem stores uploaded statement files for MVP. Google Drive may be added later as an optional enhancement.
 
 ## Core Workflow
 
 ```text
-Statement
+Simulated Platform Statement (CSV)
    ↓
-Extract
+n8n ingestion
    ↓
 Normalize
    ↓
-Rate Lookup
+Backend Audit Engine
    ↓
-Calculate
+Royalty Calculation (backend)
    ↓
-Compare
+Discrepancy Detection
    ↓
-Discrepancy
+Dashboard / Dispute draft (AI optional)
    ↓
-Dispute
+User review → explicit send
    ↓
-Email
+Email (n8n/Gmail)
    ↓
-Follow-up
-   ↓
-Escalation
+Follow-up / Escalation
 ```
 
 ## Tech Stack
@@ -58,7 +61,10 @@ Escalation
 - n8n
 - AI/LLM
 - Gmail
-- Google Drive
+
+## Sample Data (planned)
+
+Fictional CSVs under `sample-data/` (e.g. Spotify, Apple Music, YouTube Music, Audiomack) simulate platform statements—small and easy to explain in a capstone demo.
 
 ## Project Structure
 
@@ -150,6 +156,6 @@ AI assists with extraction and language generation, but verified royalty inputs 
 
 ## Project Status
 
-MVP is under development.
+Capstone MVP is under development (documentation foundation complete; implementation in progress).
 
-See `TASKS.md` for the current implementation checklist.
+See `TASKS.md` for the canonical implementation checklist.

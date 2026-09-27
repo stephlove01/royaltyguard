@@ -1,5 +1,7 @@
 # RoyaltyGuard — API Specification
 
+Capstone demo API: fictional financial data, no payment processing. Protected routes use JWT unless noted.
+
 ## 1. API Principles
 
 - RESTful HTTP API.
@@ -15,7 +17,23 @@ Base path:
 /api
 ```
 
-## 2. Health
+## 2. Authentication
+
+### POST /api/auth/register
+
+Body: email, password, name (optional).
+
+Creates user with hashed password.
+
+### POST /api/auth/login
+
+Body: email, password.
+
+Returns JWT for subsequent requests (e.g. `Authorization: Bearer <token>`).
+
+OAuth is **not** in MVP scope.
+
+## 3. Health
 
 ### GET /api/health
 
@@ -28,7 +46,7 @@ Response:
 }
 ```
 
-## 3. Statements
+## 4. Statements
 
 ### POST /api/statements
 
@@ -53,7 +71,11 @@ Returns statements with optional filters.
 
 Returns statement details and processing status.
 
-## 4. Audits
+### POST /api/statements/:id/run-audit
+
+Runs or completes backend deterministic audit (may also be invoked by n8n with service authentication). Persists audit and discrepancy records.
+
+## 5. Audits
 
 ### GET /api/audits
 
@@ -74,7 +96,7 @@ Returns:
 - discrepancies
 - audit status
 
-## 5. Discrepancies
+## 6. Discrepancies
 
 ### GET /api/discrepancies
 
@@ -84,7 +106,7 @@ Returns detected discrepancies.
 
 Returns complete discrepancy evidence.
 
-## 6. Disputes
+## 7. Disputes
 
 ### POST /api/disputes
 
@@ -100,9 +122,9 @@ Returns dispute details.
 
 ### POST /api/disputes/:id/send
 
-Sends an approved dispute through the configured email integration.
+User **explicitly** triggers send after reviewing the draft. Backend coordinates email (e.g. n8n/Gmail). Must not send without this action.
 
-## 7. Webhooks / n8n
+## 8. Webhooks / n8n
 
 Where n8n needs to notify the backend, use dedicated webhook endpoints such as:
 
@@ -112,9 +134,9 @@ POST /api/webhooks/n8n/audit-completed
 POST /api/webhooks/n8n/dispute-updated
 ```
 
-Webhook requests should be authenticated.
+Webhook requests must include a **shared secret** header (e.g. `X-Webhook-Secret`) matching server `N8N_WEBHOOK_SECRET`. Reject missing or invalid values with `401` or `403`.
 
-## 8. Status Codes
+## 9. Status Codes
 
 - `200` successful read/action
 - `201` created
@@ -129,7 +151,7 @@ Webhook requests should be authenticated.
 - `500` internal error
 - `502/503` external dependency failure
 
-## 9. Validation
+## 10. Validation
 
 Use a schema-validation library in the backend.
 
@@ -140,7 +162,7 @@ Never trust:
 - AI-generated fields.
 - Webhook payloads.
 
-## 10. Pagination
+## 11. Pagination
 
 Collection endpoints should use:
 

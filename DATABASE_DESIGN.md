@@ -1,5 +1,7 @@
 # RoyaltyGuard — Database Design
 
+All monetary amounts and rates in seed/demo data are **fictional** for the capstone demo.
+
 ## 1. Database
 
 **Database:** MySQL
@@ -32,7 +34,7 @@ User
 |---|---|---|
 | id | BIGINT | PK |
 | email | VARCHAR | Unique |
-| password_hash | VARCHAR | If local auth is used |
+| password_hash | VARCHAR | Required for capstone JWT auth |
 | name | VARCHAR | User name |
 | created_at | DATETIME | Required |
 | updated_at | DATETIME | Required |
@@ -53,11 +55,11 @@ User
 |---|---|---|
 | id | BIGINT | PK |
 | artist_id | BIGINT | FK |
-| platform | VARCHAR | Source platform |
+| platform | VARCHAR | Simulated source (e.g. Spotify, Apple Music, YouTube Music, Audiomack) |
 | file_name | VARCHAR | Original file name |
 | file_type | VARCHAR | csv/pdf/etc. |
 | statement_period | VARCHAR | Period represented |
-| storage_location | TEXT | File reference |
+| storage_location | TEXT | Local filesystem path (MVP) |
 | status | VARCHAR | Processing status |
 | created_at | DATETIME | Required |
 | updated_at | DATETIME | Required |
@@ -72,22 +74,26 @@ User
 | plays | BIGINT | Eligible units |
 | territory | VARCHAR | Territory |
 | tier | VARCHAR | Optional |
-| actual_payout | DECIMAL | Reported amount |
+| actual_payout | DECIMAL | Reported royalty from statement (demo) |
 | created_at | DATETIME | Required |
 
 ### royalty_rates
 
+Stores **configurable demo rates** for capstone audits (not official platform payout rates).
+
 | Column | Type | Notes |
 |---|---|---|
 | id | BIGINT | PK |
-| platform | VARCHAR | Platform/source |
+| platform | VARCHAR | Simulated platform name |
 | territory | VARCHAR | Optional territory |
-| rate | DECIMAL | Rate |
+| rate | DECIMAL | Demo rate (e.g. Spotify 0.004) |
 | currency | VARCHAR | Currency |
 | effective_from | DATE | Start |
 | effective_to | DATE | Optional end |
-| source | VARCHAR | Source/reference |
+| source | VARCHAR | e.g. `demo_seed` |
 | created_at | DATETIME | Required |
+
+Suggested demo seed values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002.
 
 ### audits
 

@@ -1,8 +1,14 @@
 # RoyaltyGuard — Product Requirements Document (PRD)
 
+## 0. Capstone Scope
+
+RoyaltyGuard is a **capstone / demo** music royalty auditing system. It uses **fictional** artists, songs, streaming activity, royalty rates, statements, reported payments, expected payments, discrepancies, and disputes for demonstration and learning.
+
+The system **does not** process real payments, move money, or connect to live streaming-platform payout APIs. All monetary figures shown in the product are **demo values** for audit comparison only—not official platform rates or real financial transactions.
+
 ## 1. Product Overview
 
-**RoyaltyGuard** is an AI-powered music royalty audit and dispute management system.
+**RoyaltyGuard** is an AI-powered music royalty audit and dispute management system (demo/capstone).
 
 The system helps artists and their teams:
 1. Upload or receive royalty statements.
@@ -46,6 +52,8 @@ RoyaltyGuard provides a structured workflow for ingestion, audit, discrepancy de
 
 ## 5. Non-Goals for MVP
 
+- Processing real payments or integrating payment gateways (Paystack, Flutterwave, Stripe, bank transfers, etc.).
+- Integrating with live Spotify, Apple Music, YouTube Music, Audiomack, or other streaming APIs.
 - Becoming a payment processor.
 - Replacing legal counsel.
 - Guaranteeing that a detected discrepancy is contractually recoverable.
@@ -103,7 +111,7 @@ The system compares expected and actual values and flags differences according t
 The system generates a draft dispute containing the relevant statement period, tracks, calculations, discrepancy and supporting details.
 
 ### FR-08 Email Delivery
-The system can send an approved dispute email.
+After the user **reviews** a dispute draft and **explicitly triggers send**, the system can send the dispute email (e.g. via n8n/Gmail automation).
 
 ### FR-09 Follow-Up
 The system tracks the follow-up date and can initiate a follow-up workflow.
@@ -147,8 +155,9 @@ An MVP is acceptable when a test statement can be:
 
 ## 11. Assumptions
 
-- Royalty-rate inputs are available from an approved/configured source.
-- The initial MVP uses controlled sample data.
+- Streaming platforms (Spotify, Apple Music, YouTube Music, Audiomack, etc.) are **simulated data sources** represented by small fictional CSV statements in `sample-data/`.
+- Demo royalty rates are stored in MySQL and are **not** official platform payout rates.
+- The initial MVP uses controlled fictional sample data.
 - Email is available through Gmail or another supported provider.
 - n8n is responsible for workflow orchestration, not the primary system of record.
 
@@ -164,14 +173,16 @@ An MVP is acceptable when a test statement can be:
 ## 13. MVP Scope Recommendation
 
 Start with:
-- CSV statements.
-- One controlled royalty-rate source.
-- One calculation model.
-- One discrepancy rule.
-- Gmail.
-- One n8n workflow.
-- React dashboard.
-- Node/Express API.
-- MySQL database.
+- Fictional CSV statements per simulated platform (e.g. `spotify_statement.csv`, `apple_music_statement.csv`, `youtube_music_statement.csv`, `audiomack_statement.csv` under `sample-data/`).
+- Demo royalty rates in MySQL (example demo values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002—labeled as demo only).
+- Backend-owned deterministic calculation and discrepancy detection.
+- One discrepancy threshold rule.
+- n8n for ingestion orchestration, AI-assisted extraction/drafting where useful, and email after user-approved send.
+- Simple auth: email, password (hashed), JWT.
+- Local filesystem statement storage.
+- Gmail (or test email) for dispute delivery demo.
+- React dashboard, Node/Express API, MySQL.
 
-Expand to PDFs, multiple providers, advanced contract rules and richer analytics after the core pipeline is reliable.
+**Payment model (demo):** compare reported royalty from a statement vs calculated expected royalty (e.g. expected ₦1,250, reported ₦900, difference ₦350 → discrepancy). No real money movement.
+
+Expand to PDFs, Google Drive sync, advanced contract rules, and richer analytics after the core capstone pipeline is reliable.

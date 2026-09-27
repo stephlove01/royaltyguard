@@ -1,5 +1,7 @@
 # RoyaltyGuard — Task Tracker
 
+**Capstone scope:** fictional demo data, simulated streaming CSVs (no live platform APIs), backend-owned royalty math, local file storage, email/password/JWT auth, user must approve dispute send. See `PRD.md` and `DECISIONS.md`.
+
 ## Status Legend
 
 - `[ ]` Not started
@@ -9,22 +11,22 @@
 
 ## Phase 0 — Product & Architecture
 
-- [ ] TASK-001 Finalize PRD
-- [ ] TASK-002 Finalize system architecture
-- [ ] TASK-003 Finalize database design
-- [ ] TASK-004 Finalize API specification
-- [ ] TASK-005 Finalize AI/n8n specification
-- [ ] TASK-006 Finalize UI/UX specification
+- [x] TASK-001 Finalize PRD (capstone scope)
+- [x] TASK-002 Finalize system architecture
+- [x] TASK-003 Finalize database design
+- [x] TASK-004 Finalize API specification
+- [x] TASK-005 Finalize AI/n8n specification
+- [x] TASK-006 Finalize UI/UX specification
 
 ## Phase 1 — Repository
 
-- [ ] TASK-007 Create repository structure
+- [ ] TASK-007 Create repository structure (`frontend/`, `backend/`, `database/`, `n8n/`, `sample-data/`)
 - [ ] TASK-008 Initialize frontend
 - [ ] TASK-009 Initialize backend
 - [ ] TASK-010 Configure TypeScript
-- [ ] TASK-011 Create `.env.example`
-- [ ] TASK-012 Create AGENTS.md
-- [ ] TASK-013 Update README
+- [ ] TASK-011 Create `.env.example` (DB, JWT, upload dir, `N8N_WEBHOOK_SECRET`, n8n URLs)
+- [x] TASK-012 Create AGENTS.md
+- [x] TASK-013 Update README (capstone scope)
 
 ## Phase 2 — Database
 
@@ -39,99 +41,103 @@
 - [ ] TASK-022 Create discrepancies table
 - [ ] TASK-023 Create disputes table
 - [ ] TASK-024 Add indexes and constraints
-- [ ] TASK-025 Add seed data
+- [ ] TASK-025 Seed demo data (fictional artists + demo platform rates: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002)
+- [ ] TASK-026 Add fictional sample CSVs under `sample-data/` (`spotify_statement.csv`, `apple_music_statement.csv`, `youtube_music_statement.csv`, `audiomack_statement.csv`)
 
 ## Phase 3 — Backend
 
-- [ ] TASK-026 Create Express app
-- [ ] TASK-027 Add configuration
-- [ ] TASK-028 Add MySQL connection
-- [ ] TASK-029 Add error middleware
-- [ ] TASK-030 Add request validation
-- [ ] TASK-031 Add health endpoint
-- [ ] TASK-032 Add statement service
-- [ ] TASK-033 Add statement API
-- [ ] TASK-034 Add audit API
-- [ ] TASK-035 Add discrepancy API
-- [ ] TASK-036 Add dispute API
+- [ ] TASK-027 Create Express app
+- [ ] TASK-028 Add configuration
+- [ ] TASK-029 Add MySQL connection
+- [ ] TASK-030 Add error middleware
+- [ ] TASK-031 Add request validation
+- [ ] TASK-032 Add health endpoint
+- [ ] TASK-033 Implement auth (register, login, password hash, JWT middleware)
+- [ ] TASK-034 Add local filesystem upload storage for statements
+- [ ] TASK-035 Add webhook shared-secret middleware for n8n endpoints
+- [ ] TASK-036 Add statement service
+- [ ] TASK-037 Add statement API
+- [ ] TASK-038 Add audit API (including run-audit / internal audit engine entry)
+- [ ] TASK-039 Add discrepancy API
+- [ ] TASK-040 Add dispute API (draft + explicit send trigger)
 
 ## Phase 4 — Frontend
 
-- [ ] TASK-037 Create app shell
-- [ ] TASK-038 Configure routing
-- [ ] TASK-039 Configure Tailwind
-- [ ] TASK-040 Create API client
-- [ ] TASK-041 Build dashboard
-- [ ] TASK-042 Build statements page
-- [ ] TASK-043 Build statement detail
-- [ ] TASK-044 Build audits page
-- [ ] TASK-045 Build discrepancy page
-- [ ] TASK-046 Build disputes page
-- [ ] TASK-047 Add loading/error/empty states
+- [ ] TASK-041 Create app shell
+- [ ] TASK-042 Configure routing (including `/login`)
+- [ ] TASK-043 Configure Tailwind
+- [ ] TASK-044 Create API client (JWT)
+- [ ] TASK-045 Build login/register UI
+- [ ] TASK-046 Build dashboard
+- [ ] TASK-047 Build statements page
+- [ ] TASK-048 Build statement detail
+- [ ] TASK-049 Build audits page
+- [ ] TASK-050 Build discrepancy page
+- [ ] TASK-051 Build disputes page (review draft, explicit send)
+- [ ] TASK-052 Add loading/error/empty states
 
 ## Phase 5 — Audit Engine
 
-- [ ] TASK-048 Define canonical royalty schema
-- [ ] TASK-049 Implement normalization
-- [ ] TASK-050 Implement rate lookup
-- [ ] TASK-051 Implement deterministic calculation
-- [ ] TASK-052 Implement discrepancy threshold
-- [ ] TASK-053 Persist audit results
-- [ ] TASK-054 Write calculation tests
-- [ ] TASK-055 Write discrepancy tests
+- [ ] TASK-053 Define canonical royalty schema
+- [ ] TASK-054 Implement normalization
+- [ ] TASK-055 Implement rate lookup (MySQL demo rates)
+- [ ] TASK-056 Implement deterministic calculation (backend only)
+- [ ] TASK-057 Implement discrepancy threshold
+- [ ] TASK-058 Persist audit results
+- [ ] TASK-059 Write calculation tests
+- [ ] TASK-060 Write discrepancy tests
 
 ## Phase 6 — n8n
 
-- [ ] TASK-056 Create statement trigger
-- [ ] TASK-057 Connect n8n to backend
-- [ ] TASK-058 Implement extraction
-- [ ] TASK-059 Implement normalization
-- [ ] TASK-060 Implement rate lookup
-- [ ] TASK-061 Implement calculation
-- [ ] TASK-062 Implement discrepancy branch
-- [ ] TASK-063 Implement database/API update
-- [ ] TASK-064 Add retries/error paths
-- [ ] TASK-065 Add idempotency handling
+- [ ] TASK-061 Create statement upload trigger workflow
+- [ ] TASK-062 Connect n8n to backend (HTTP + shared secret)
+- [ ] TASK-063 Implement CSV extraction/ingestion
+- [ ] TASK-064 Submit normalized rows to backend
+- [ ] TASK-065 Invoke backend audit API (no n8n royalty math)
+- [ ] TASK-066 Handle discrepancy branch from backend response
+- [ ] TASK-067 Persist updates via backend API / webhooks
+- [ ] TASK-068 Add retries/error paths
+- [ ] TASK-069 Add idempotency handling
 
 ## Phase 7 — AI
 
-- [ ] TASK-066 Define extraction prompt
-- [ ] TASK-067 Define structured output schema
-- [ ] TASK-068 Validate AI output
-- [ ] TASK-069 Define dispute-generation prompt
-- [ ] TASK-070 Prevent unsupported claims/invented facts
-- [ ] TASK-071 Test AI failure cases
+- [ ] TASK-070 Define extraction prompt (optional for CSV; useful for classification)
+- [ ] TASK-071 Define structured output schema
+- [ ] TASK-072 Validate AI output
+- [ ] TASK-073 Define dispute-generation prompt
+- [ ] TASK-074 Prevent unsupported claims/invented facts
+- [ ] TASK-075 Test AI failure cases
 
 ## Phase 8 — Disputes
 
-- [ ] TASK-072 Create dispute draft flow
-- [ ] TASK-073 Create dispute review UI
-- [ ] TASK-074 Configure Gmail
-- [ ] TASK-075 Implement send action
-- [ ] TASK-076 Record sent message
-- [ ] TASK-077 Implement follow-up workflow
-- [ ] TASK-078 Implement escalation
+- [ ] TASK-076 Create dispute draft flow (AI → draft in DB)
+- [ ] TASK-077 Create dispute review UI
+- [ ] TASK-078 Configure Gmail in n8n
+- [ ] TASK-079 Implement send action (user-triggered → n8n/Gmail)
+- [ ] TASK-080 Record sent message
+- [ ] TASK-081 Implement follow-up workflow
+- [ ] TASK-082 Implement escalation
 
 ## Phase 9 — Testing & Security
 
-- [ ] TASK-079 Unit tests
-- [ ] TASK-080 API integration tests
-- [ ] TASK-081 n8n workflow tests
-- [ ] TASK-082 End-to-end test
-- [ ] TASK-083 Input validation review
-- [ ] TASK-084 Secrets/security review
-- [ ] TASK-085 Duplicate-processing test
-- [ ] TASK-086 Failure/retry test
+- [ ] TASK-083 Unit tests
+- [ ] TASK-084 API integration tests (including auth and webhook secret)
+- [ ] TASK-085 n8n workflow tests
+- [ ] TASK-086 End-to-end test (sample CSV → audit → dispute review → send)
+- [ ] TASK-087 Input validation review
+- [ ] TASK-088 Secrets/security review
+- [ ] TASK-089 Duplicate-processing test
+- [ ] TASK-090 Failure/retry test
 
 ## Phase 10 — Deployment
 
-- [ ] TASK-087 Prepare production environment
-- [ ] TASK-088 Configure production database
-- [ ] TASK-089 Deploy backend
-- [ ] TASK-090 Deploy frontend
-- [ ] TASK-091 Deploy/configure n8n
-- [ ] TASK-092 Configure monitoring
-- [ ] TASK-093 Configure backups
+- [ ] TASK-091 Prepare demo/deployment environment
+- [ ] TASK-092 Configure deployment database
+- [ ] TASK-093 Deploy backend
+- [ ] TASK-094 Deploy frontend
+- [ ] TASK-095 Deploy/configure n8n
+- [ ] TASK-096 Configure monitoring (minimal)
+- [ ] TASK-097 Configure backups (minimal)
 
 ## Task Rule
 

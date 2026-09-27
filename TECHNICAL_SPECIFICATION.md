@@ -1,5 +1,7 @@
 # RoyaltyGuard — Technical Specification
 
+Capstone/demo system: fictional financial data, no real payments, no live streaming APIs. Demo royalty rates in MySQL are not official platform rates.
+
 ## 1. Technology Stack
 
 | Layer | Technology |
@@ -10,15 +12,16 @@
 | Database | MySQL |
 | Automation | n8n |
 | AI | LLM through n8n/backend integration |
-| Email | Gmail |
-| File Storage | Google Drive for MVP integration |
+| Email | Gmail (dispute send after user approval) |
+| File Storage | Local filesystem (MVP) |
+| Authentication | Email + password (hashed) + JWT |
 | API Testing | Postman |
 | Version Control | Git + GitHub |
 
 ## 2. Engineering Principles
 
 1. Separate concerns.
-2. Keep financial calculations deterministic.
+2. Keep financial calculations deterministic in the **backend**; n8n and LLMs must not independently compute royalty results.
 3. Validate all external input.
 4. Make workflows observable.
 5. Prefer explicit contracts over implicit behavior.
@@ -54,6 +57,10 @@ difference = 100
 ```
 
 The example is for system testing only. It is not a claim about a real platform's contractual rate.
+
+**Demo comparison (fictional):** expected royalty ₦1,250 vs reported ₦900 → difference ₦350 → discrepancy. No payment processing occurs.
+
+**Example demo rates (MySQL seed, not official):** Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002.
 
 ## 4. Precision
 
@@ -124,12 +131,24 @@ Do not expose database internals or secrets in production error messages.
 Use environment variables for:
 - Database connection.
 - API port.
-- AI credentials.
-- Google credentials.
+- Upload directory (local statement storage).
+- JWT secret and token settings.
+- AI credentials (when used).
 - n8n webhook URLs.
-- JWT/authentication secrets where applicable.
+- `N8N_WEBHOOK_SECRET` (shared secret for inbound n8n → backend webhooks).
+- Gmail credentials (via n8n or backend as implemented).
+
+Google Drive credentials are **not** required for MVP (future enhancement only).
 
 Provide `.env.example`; never commit `.env`.
+
+## 8.1 Authentication (MVP)
+
+- Register/login with email and password.
+- Store `password_hash` only (e.g. bcrypt)—never plain passwords.
+- Issue JWT for authenticated API requests.
+- No OAuth providers for MVP.
+- No complex RBAC unless added later; default to authenticated user access to their data.
 
 ## 9. AI Guardrails
 
