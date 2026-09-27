@@ -20,7 +20,7 @@
 
 ## Phase 1 — Repository
 
-- [ ] TASK-007 Create repository structure (`frontend/`, `backend/`, `database/`, `n8n/`, `sample-data/`)
+- [x] TASK-007 Create repository structure (`frontend/`, `backend/`, `database/`, `n8n/`, `sample-data/`)
 - [ ] TASK-008 Initialize frontend
 - [ ] TASK-009 Initialize backend
 - [ ] TASK-010 Configure TypeScript
