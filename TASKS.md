@@ -35,7 +35,7 @@
 - [x] TASK-016 Create users table
 - [x] TASK-017 Create artists table
 - [x] TASK-018 Create statements table
-- [ ] TASK-019 Create royalty_rows table
+- [x] TASK-019 Create royalty_rows table
 - [ ] TASK-020 Create royalty_rates table
 - [ ] TASK-021 Create audits table
 - [ ] TASK-022 Create discrepancies table
