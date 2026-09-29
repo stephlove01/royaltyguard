@@ -34,7 +34,7 @@
 - [x] TASK-015 Create migration system
 - [x] TASK-016 Create users table
 - [x] TASK-017 Create artists table
-- [ ] TASK-018 Create statements table
+- [x] TASK-018 Create statements table
 - [ ] TASK-019 Create royalty_rows table
 - [ ] TASK-020 Create royalty_rates table
 - [ ] TASK-021 Create audits table
