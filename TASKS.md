@@ -49,8 +49,8 @@
 - [x] TASK-027 Create Express app
 - [x] TASK-028 Add configuration
 - [x] TASK-029 Add MySQL connection
-- [ ] TASK-030 Add error middleware
-- [ ] TASK-031 Add request validation
+- [x] TASK-030 Add error middleware
+- [x] TASK-031 Add request validation
 - [ ] TASK-032 Add health endpoint
 - [ ] TASK-033 Implement auth (register, login, password hash, JWT middleware)
 - [ ] TASK-034 Add local filesystem upload storage for statements
