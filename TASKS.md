@@ -40,7 +40,7 @@
 - [x] TASK-021 Create audits table
 - [x] TASK-022 Create discrepancies table
 - [x] TASK-023 Create disputes table
-- [ ] TASK-024 Add indexes and constraints
+- [x] TASK-024 Add indexes and constraints
 - [ ] TASK-025 Seed demo data (fictional artists + demo platform rates: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002)
 - [ ] TASK-026 Add fictional sample CSVs under `sample-data/` (`spotify_statement.csv`, `apple_music_statement.csv`, `youtube_music_statement.csv`, `audiomack_statement.csv`)
 
