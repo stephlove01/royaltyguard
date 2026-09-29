@@ -51,8 +51,8 @@
 - [x] TASK-029 Add MySQL connection
 - [x] TASK-030 Add error middleware
 - [x] TASK-031 Add request validation
-- [ ] TASK-032 Add health endpoint
-- [ ] TASK-033 Implement auth (register, login, password hash, JWT middleware)
+- [x] TASK-032 Add health endpoint
+- [x] TASK-033 Implement auth (register, login, password hash, JWT middleware)
 - [ ] TASK-034 Add local filesystem upload storage for statements
 - [ ] TASK-035 Add webhook shared-secret middleware for n8n endpoints
 - [ ] TASK-036 Add statement service

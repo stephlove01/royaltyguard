@@ -6,6 +6,8 @@ export type RequestDataSource = 'body' | 'query' | 'params'
 export interface RequestFieldRule {
   type: RequestFieldType
   required?: boolean
+  validate?: (value: unknown) => boolean
+  invalidMessage?: string
 }
 
 export type RequestValidationSchema = Record<string, RequestFieldRule>
@@ -53,6 +55,8 @@ export function validateRequest(
 
         if (!matchesType(value, rule.type)) {
           errors.push(`${field} must be a ${rule.type}`)
+        } else if (rule.validate && !rule.validate(value)) {
+          errors.push(rule.invalidMessage ?? `${field} is invalid`)
         } else if (rule.required && typeof value === 'string' && value.trim() === '') {
           errors.push(`${field} is required`)
         }
