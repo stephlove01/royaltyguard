@@ -1,5 +1,6 @@
 import cors from 'cors'
 import express from 'express'
+import errorHandler from './middleware/errorHandler'
 
 const app = express()
 
@@ -11,5 +12,7 @@ app.get('/', (_req, res) => {
     message: 'RoyaltyGuard API is running',
   })
 })
+
+app.use(errorHandler)
 
 export default app
