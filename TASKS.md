@@ -38,7 +38,7 @@
 - [x] TASK-019 Create royalty_rows table
 - [x] TASK-020 Create royalty_rates table
 - [x] TASK-021 Create audits table
-- [ ] TASK-022 Create discrepancies table
+- [x] TASK-022 Create discrepancies table
 - [ ] TASK-023 Create disputes table
 - [ ] TASK-024 Add indexes and constraints
 - [ ] TASK-025 Seed demo data (fictional artists + demo platform rates: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002)
