@@ -24,7 +24,7 @@
 - [x] TASK-008 Initialize frontend
 - [x] TASK-009 Initialize backend
 - [x] TASK-010 Configure TypeScript
-- [ ] TASK-011 Create `.env.example` (DB, JWT, upload dir, `N8N_WEBHOOK_SECRET`, n8n URLs)
+- [x] TASK-011 Create `.env.example` (DB, JWT, upload dir, `N8N_WEBHOOK_SECRET`, n8n URLs)
 - [x] TASK-012 Create AGENTS.md
 - [x] TASK-013 Update README (capstone scope)
 
