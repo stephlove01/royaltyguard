@@ -31,7 +31,7 @@
 ## Phase 2 — Database
 
 - [x] TASK-014 Create MySQL database
-- [ ] TASK-015 Create migration system
+- [x] TASK-015 Create migration system
 - [ ] TASK-016 Create users table
 - [ ] TASK-017 Create artists table
 - [ ] TASK-018 Create statements table
