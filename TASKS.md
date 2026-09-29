@@ -46,9 +46,9 @@
 
 ## Phase 3 — Backend
 
-- [ ] TASK-027 Create Express app
-- [ ] TASK-028 Add configuration
-- [ ] TASK-029 Add MySQL connection
+- [x] TASK-027 Create Express app
+- [x] TASK-028 Add configuration
+- [x] TASK-029 Add MySQL connection
 - [ ] TASK-030 Add error middleware
 - [ ] TASK-031 Add request validation
 - [ ] TASK-032 Add health endpoint
