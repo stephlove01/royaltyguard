@@ -21,7 +21,7 @@
 ## Phase 1 — Repository
 
 - [x] TASK-007 Create repository structure (`frontend/`, `backend/`, `database/`, `n8n/`, `sample-data/`)
-- [ ] TASK-008 Initialize frontend
+- [x] TASK-008 Initialize frontend
 - [ ] TASK-009 Initialize backend
 - [ ] TASK-010 Configure TypeScript
 - [ ] TASK-011 Create `.env.example` (DB, JWT, upload dir, `N8N_WEBHOOK_SECRET`, n8n URLs)
