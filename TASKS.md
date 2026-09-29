@@ -22,7 +22,7 @@
 
 - [x] TASK-007 Create repository structure (`frontend/`, `backend/`, `database/`, `n8n/`, `sample-data/`)
 - [x] TASK-008 Initialize frontend
-- [ ] TASK-009 Initialize backend
+- [x] TASK-009 Initialize backend
 - [ ] TASK-010 Configure TypeScript
 - [ ] TASK-011 Create `.env.example` (DB, JWT, upload dir, `N8N_WEBHOOK_SECRET`, n8n URLs)
 - [x] TASK-012 Create AGENTS.md
