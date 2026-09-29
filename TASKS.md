@@ -37,7 +37,7 @@
 - [x] TASK-018 Create statements table
 - [x] TASK-019 Create royalty_rows table
 - [x] TASK-020 Create royalty_rates table
-- [ ] TASK-021 Create audits table
+- [x] TASK-021 Create audits table
 - [ ] TASK-022 Create discrepancies table
 - [ ] TASK-023 Create disputes table
 - [ ] TASK-024 Add indexes and constraints
