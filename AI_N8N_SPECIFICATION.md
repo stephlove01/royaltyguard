@@ -103,6 +103,29 @@ Normalize:
 
 Canonical schema must be documented and stable.
 
+RoyaltyGuard's canonical statement shape is:
+
+```json
+{
+  "platform": "Spotify",
+  "statementPeriod": "2026-Q1",
+  "rows": [
+    {
+      "trackName": "Example Track",
+      "eligibleUnits": "100000",
+      "territory": "NG",
+      "tier": null,
+      "actualPayout": "300.00"
+    }
+  ]
+}
+```
+
+Canonical values use stable field names, trimmed text, uppercase territory
+codes, non-negative decimal strings for money, and non-negative whole-number
+strings for eligible units. Source aliases such as `plays`, `streams`, and
+`actual_payout` are normalized before the audit engine consumes a row.
+
 ## 7. Royalty Rate Lookup
 
 n8n calls the **backend** (which reads demo rates from MySQL). Do not hard-code rates in n8n workflows as authoritative values.

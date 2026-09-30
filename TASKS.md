@@ -78,9 +78,9 @@
 
 ## Phase 5 — Audit Engine
 
-- [ ] TASK-053 Define canonical royalty schema
-- [ ] TASK-054 Implement normalization
-- [ ] TASK-055 Implement rate lookup (MySQL demo rates)
+- [x] TASK-053 Define canonical royalty schema
+- [x] TASK-054 Implement normalization
+- [x] TASK-055 Implement rate lookup (MySQL demo rates)
 - [ ] TASK-056 Implement deterministic calculation (backend only)
 - [ ] TASK-057 Implement discrepancy threshold
 - [ ] TASK-058 Persist audit results

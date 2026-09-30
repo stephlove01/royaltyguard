@@ -1,5 +1,8 @@
 import { PoolConnection, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../database'
+import { normalizeRoyaltyRow } from './normalizationService'
+import { CanonicalRoyaltyRow } from './royaltySchema'
+import { findApplicableRoyaltyRate } from './royaltyRateService'
 
 interface StatementForAudit extends RowDataPacket {
   id: number
@@ -13,19 +16,13 @@ interface StatementSummary extends RowDataPacket {
   statementPeriod: string
 }
 
-interface RoyaltyRow extends RowDataPacket {
+interface DatabaseRoyaltyRow extends RowDataPacket {
   id: number
   trackName: string
-  plays: string
+  eligibleUnits: string
   territory: string
+  tier: string | null
   actualPayout: string
-}
-
-interface RoyaltyRate extends RowDataPacket {
-  id: number
-  rate: string
-  currency: string
-  source: string
 }
 
 export interface AuditRecord extends RowDataPacket {
@@ -255,9 +252,9 @@ export async function runStatementAudit(
       }
     }
 
-    const [royaltyRows] = await connection.execute<RoyaltyRow[]>(
-      `SELECT id, track_name AS trackName, CAST(plays AS CHAR) AS plays,
-        territory, CAST(actual_payout AS CHAR) AS actualPayout
+    const [royaltyRows] = await connection.execute<DatabaseRoyaltyRow[]>(
+      `SELECT id, track_name AS trackName, CAST(plays AS CHAR) AS eligibleUnits,
+        territory, tier, CAST(actual_payout AS CHAR) AS actualPayout
       FROM royalty_rows WHERE statement_id = ? ORDER BY id`,
       [statement.id],
     )
@@ -274,8 +271,13 @@ export async function runStatementAudit(
       }
     }
 
+    const canonicalRows: Array<CanonicalRoyaltyRow & { id: number }> = royaltyRows.map((row) => ({
+      ...normalizeRoyaltyRow(row),
+      id: row.id,
+    }))
+
     const calculations: Array<{
-      row: RoyaltyRow
+      row: CanonicalRoyaltyRow & { id: number }
       expectedCents: bigint
       actualCents: bigint
       differenceCents: bigint
@@ -284,19 +286,12 @@ export async function runStatementAudit(
     let totalExpectedCents = 0n
     let totalActualCents = 0n
 
-    for (const row of royaltyRows) {
-      const [rates] = await connection.execute<RoyaltyRate[]>(
-        `SELECT id, CAST(rate AS CHAR) AS rate, currency, source
-        FROM royalty_rates
-        WHERE platform = ?
-          AND (territory = ? OR territory IS NULL)
-          AND effective_from <= ?
-          AND (effective_to IS NULL OR effective_to >= ?)
-        ORDER BY CASE WHEN territory = ? THEN 0 ELSE 1 END, effective_from DESC
-        LIMIT 1`,
-        [statement.platform, row.territory, periodStart, periodStart, row.territory],
-      )
-      const rate = rates[0]
+    for (const row of canonicalRows) {
+      const rate = await findApplicableRoyaltyRate(connection, {
+        platform: statement.platform,
+        territory: row.territory,
+        periodStart,
+      })
 
       if (!rate) {
         missingRates.push({
@@ -307,7 +302,7 @@ export async function runStatementAudit(
         continue
       }
 
-      const plays = BigInt(row.plays)
+      const plays = BigInt(row.eligibleUnits)
       const rateMicros = parseScaledDecimal(rate.rate, 6)
       const actualCents = parseScaledDecimal(row.actualPayout, 2)
 
