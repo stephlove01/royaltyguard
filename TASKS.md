@@ -63,9 +63,9 @@
 
 ## Phase 4 — Frontend
 
-- [ ] TASK-041 Create app shell
-- [ ] TASK-042 Configure routing (including `/login`)
-- [ ] TASK-043 Configure Tailwind
+- [x] TASK-041 Create app shell
+- [x] TASK-042 Configure routing (including `/login`)
+- [x] TASK-043 Configure Tailwind
 - [ ] TASK-044 Create API client (JWT)
 - [ ] TASK-045 Build login/register UI
 - [ ] TASK-046 Build dashboard

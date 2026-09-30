@@ -1,21 +1,35 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
+import AppShell from './layouts/AppShell'
+import NotFoundPage from './pages/NotFoundPage'
+import SectionPage from './pages/SectionPage'
+
 function App() {
   return (
-    <main className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
-      <section className="text-center text-white">
-        <p className="mb-3 text-sm font-medium uppercase tracking-widest text-purple-400">
-          Music Royalty Audit
-        </p>
-
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          RoyaltyGuard
-        </h1>
-
-        <p className="mx-auto mt-4 max-w-xl text-slate-300">
-          Detect potential royalty leakage by comparing reported payouts
-          against expected earnings from streaming activity.
-        </p>
-      </section>
-    </main>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route
+          path="/dashboard"
+          element={
+            <SectionPage
+              eyebrow="Overview"
+              title="RoyaltyGuard Dashboard"
+              description="Your royalty operations workspace."
+            />
+          }
+        />
+        <Route path="/statements" element={<SectionPage eyebrow="Library" title="Statements" />} />
+        <Route path="/audits" element={<SectionPage eyebrow="Review" title="Audits" />} />
+        <Route
+          path="/discrepancies"
+          element={<SectionPage eyebrow="Exceptions" title="Discrepancies" />}
+        />
+        <Route path="/disputes" element={<SectionPage eyebrow="Resolution" title="Disputes" />} />
+        <Route path="/login" element={<SectionPage eyebrow="Account" title="Login" />} />
+        <Route path="/register" element={<SectionPage eyebrow="Account" title="Register" />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   )
 }
 
