@@ -48,6 +48,31 @@ Response:
 
 ## 4. Statements
 
+### POST /api/statements/upload
+
+Requires `Authorization: Bearer <JWT>` and accepts one multipart file in the
+`file` field. CSV and PDF files up to 10 MB are accepted. The backend stores the
+file under `UPLOAD_DIR` (default: `uploads`) in a directory scoped to the JWT
+user, using a generated filename. This endpoint does not create a statement
+record or parse the file.
+
+Successful response (`201`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "originalFilename": "statement.csv",
+    "storedFilename": "generated-uuid.csv",
+    "fileSize": 123,
+    "mimeType": "text/csv"
+  }
+}
+```
+
+Unsupported file types and missing files return `400`; files larger than 10 MB
+return `413`. Requests without a valid JWT return `401`.
+
 ### POST /api/statements
 
 Creates a statement record or accepts a statement upload.

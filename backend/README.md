@@ -8,4 +8,7 @@ REST API, validation, authentication, MySQL access, local statement file storage
 
 ## Status
 
-Repository structure placeholder. Application initialization is **TASK-009**.
+The authenticated `POST /api/statements/upload` endpoint stores one CSV or PDF
+file (up to 10 MB) under `UPLOAD_DIR` (default: `uploads`). Files use generated
+UUID names and are placed in a directory scoped to the authenticated user. This
+upload step does not yet create a statement database record or parse the file.
