@@ -3,6 +3,9 @@ import express from 'express'
 import authRoutes from './routes/authRoutes'
 import healthRoutes from './routes/healthRoutes'
 import statementsRoutes from './routes/statementsRoutes'
+import auditsRoutes from './routes/auditsRoutes'
+import discrepanciesRoutes from './routes/discrepanciesRoutes'
+import disputesRoutes from './routes/disputesRoutes'
 import errorHandler from './middleware/errorHandler'
 
 const app = express()
@@ -12,6 +15,9 @@ app.use(express.json())
 app.use('/api', healthRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/statements', statementsRoutes)
+app.use('/api/audits', auditsRoutes)
+app.use('/api/discrepancies', discrepanciesRoutes)
+app.use('/api/disputes', disputesRoutes)
 
 app.get('/', (_req, res) => {
   res.json({

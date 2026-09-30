@@ -104,13 +104,29 @@ statements both return `404`.
 
 ### POST /api/statements/:id/run-audit
 
-Runs or completes backend deterministic audit (may also be invoked by n8n with service authentication). Persists audit and discrepancy records.
+Requires JWT authentication and an owned statement. Runs the deterministic
+backend audit, persists the audit and discrepancies, and returns `200` with the
+audit and detected discrepancies. Repeated runs update the same audit and
+replace its generated discrepancy rows. A statement with no royalty rows, an
+invalid period, or any row without an applicable rate returns `422` and marks
+the audit failed; the response includes the audit and a reason. A statement
+that does not belong to the user returns `404`.
+
+Rates are selected by exact platform and territory first, then a platform-wide
+rate (`territory IS NULL`), using the latest rate effective on the statement
+period start. Supported period forms include `YYYY`, `YYYY-MM`, `YYYY-MM-DD`,
+and `YYYY-QN`. The backend calculates in integer cents and rounds expected
+payouts half up to two decimal places. A discrepancy is created only when
+`expected - actual > DISCREPANCY_THRESHOLD`; the default threshold is `0.00`.
 
 ## 5. Audits
 
 ### GET /api/audits
 
-Returns audits.
+Requires JWT authentication. Returns only audits whose statements belong to
+the authenticated user. Supports `status`, `statementId`, `page`, and `limit`
+filters; page defaults to 1 and limit defaults to 20 (maximum 100). The response
+uses the standard `data` and `pagination` fields.
 
 Supported query parameters may include:
 - status
@@ -122,34 +138,46 @@ Supported query parameters may include:
 ### GET /api/audits/:id
 
 Returns:
-- statement
-- calculated totals
-- discrepancies
-- audit status
+Requires JWT authentication and returns the audit, its statement summary, and
+discrepancy evidence. Audits not owned by the authenticated user return `404`.
 
 ## 6. Discrepancies
 
 ### GET /api/discrepancies
 
-Returns detected discrepancies.
+Requires JWT authentication. Returns only discrepancies belonging to the
+authenticated user's statements, with `status`, `auditId`, `page`, and `limit`
+filters and standard pagination metadata.
 
 ### GET /api/discrepancies/:id
 
-Returns complete discrepancy evidence.
+Requires JWT authentication and returns the discrepancy with its statement
+and royalty-row evidence. Inaccessible or missing discrepancies return `404`.
 
 ## 7. Disputes
 
 ### POST /api/disputes
 
-Creates a dispute draft.
+Requires JWT authentication. Creates a draft for an owned discrepancy from
+`discrepancyId`, `recipient`, `subject`, and `body`. The draft is user-provided;
+this endpoint does not invoke AI.
 
 ### GET /api/disputes
 
-Lists disputes.
+Requires JWT authentication. Lists only the authenticated user's disputes with
+optional `status`, `page`, and `limit` filters and standard pagination.
 
 ### GET /api/disputes/:id
 
-Returns dispute details.
+Requires JWT authentication and returns the dispute and its discrepancy and
+statement summary. Inaccessible or missing disputes return `404`.
+User **explicitly** triggers send after reviewing the draft. The backend sends
+the dispute to the configured `N8N_DISPUTE_SEND_WEBHOOK_URL` with the
+`X-N8N-Webhook-Secret` header. A successful n8n response marks the dispute
+`sent`; a failed request leaves it as `draft`. If sending is not configured,
+the endpoint returns `503`. Only drafts can be sent; repeat sends return
+`409`. The outbound payload contains `idempotencyKey: "dispute-<id>"` so n8n
+can safely deduplicate delivery retries.
 
 ### POST /api/disputes/:id/send
 

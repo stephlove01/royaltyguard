@@ -1,3 +1,13 @@
+POST /api/statements/:id/run-audit → Backend (rate lookup, audit, calculate, compare)
+POST /api/disputes → Save reviewed/user-provided draft
+Inbound webhook requests must include the `X-N8N-Webhook-Secret` header
+matching `N8N_WEBHOOK_SECRET`. Reject requests with missing configuration or
+invalid secrets. For user-approved dispute sends, the backend calls the
+configured `N8N_DISPUTE_SEND_WEBHOOK_URL` with that same header; n8n should
+return success only after the configured send action succeeds. Do not send a
+dispute before the authenticated user invokes `POST /api/disputes/:id/send`.
+Use the payload's `idempotencyKey` (stable per dispute) to prevent duplicate
+email delivery when a send request is retried.
 # RoyaltyGuard — AI & n8n Workflow Specification
 
 Capstone demo: simulated platform CSV statements, fictional rates in MySQL, no live streaming APIs, no payment processing.

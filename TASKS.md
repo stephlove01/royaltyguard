@@ -57,9 +57,9 @@
 - [x] TASK-035 Add webhook shared-secret middleware for n8n endpoints
 - [x] TASK-036 Add statement service
 - [x] TASK-037 Add statement API
-- [ ] TASK-038 Add audit API (including run-audit / internal audit engine entry)
-- [ ] TASK-039 Add discrepancy API
-- [ ] TASK-040 Add dispute API (draft + explicit send trigger)
+- [x] TASK-038 Add audit API (including run-audit / internal audit engine entry)
+- [x] TASK-039 Add discrepancy API
+- [x] TASK-040 Add dispute API (draft + explicit send trigger)
 
 ## Phase 4 — Frontend
 

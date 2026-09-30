@@ -71,7 +71,12 @@ Preferred approaches:
 - Decimal-safe calculation library in Node.js.
 - Explicit rounding policy.
 
-The rounding policy must be documented before production use.
+RoyaltyGuard audits use integer cents and integer-scaled rate values. Expected
+payouts are rounded half up to two decimal places before totals and differences
+are stored. This MVP uses a configurable `DISCREPANCY_THRESHOLD` (default
+`0.00`) and flags underpayments where expected minus actual is greater than
+that threshold. Missing effective rates fail the audit rather than defaulting
+to zero. These demo rules should be reviewed before production use.
 
 ## 5. Backend Structure
 

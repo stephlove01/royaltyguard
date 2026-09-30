@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { uploadStatement } from '../controllers/statementsController'
+import { runAudit } from '../controllers/auditsController'
 import {
   createStatement,
   getStatement,
@@ -18,6 +19,7 @@ statementsRoutes.post(
   validateCreateStatement,
   createStatement,
 )
+statementsRoutes.post('/:id/run-audit', authenticateToken, validateStatementId, runAudit)
 statementsRoutes.get('/', authenticateToken, listStatements)
 statementsRoutes.get('/:id', authenticateToken, validateStatementId, getStatement)
 statementsRoutes.post(
