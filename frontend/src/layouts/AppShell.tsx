@@ -1,4 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 const workspaceLinks = [
   { label: 'Dashboard', to: '/dashboard', marker: '01' },
@@ -62,6 +64,14 @@ function WorkspaceNav({ mobile = false }: { mobile?: boolean }) {
 }
 
 function AppShell() {
+  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+
+  function handleSignOut() {
+    signOut()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto min-h-screen max-w-[1680px] lg:grid lg:grid-cols-[258px_minmax(0,1fr)]">
@@ -94,23 +104,17 @@ function AppShell() {
               <span className="mx-2 text-line">/</span>
               <span>Workspace</span>
             </div>
-            <nav aria-label="Account" className="ml-auto flex items-center gap-2">
-              <NavLink
-                to="/login"
-                className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                    isActive ? 'bg-pine/10 text-pine' : 'text-muted hover:bg-canvas hover:text-ink'
-                  }`
-                }
+            <nav aria-label="Account" className="ml-auto flex items-center gap-2 sm:gap-4">
+              <span className="hidden max-w-48 truncate text-sm font-medium text-muted sm:block">
+                {user?.name || user?.email || 'Account'}
+              </span>
+              <button
+                className="min-h-10 rounded-lg border border-line px-3 text-sm font-semibold text-ink transition-colors hover:border-pine/40 hover:text-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pine"
+                onClick={handleSignOut}
+                type="button"
               >
-                Login
-              </NavLink>
-              <NavLink
-                to="/register"
-                className="rounded-lg bg-pine px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pine"
-              >
-                Register
-              </NavLink>
+                Sign out
+              </button>
             </nav>
           </header>
 

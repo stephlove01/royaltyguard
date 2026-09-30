@@ -66,9 +66,9 @@
 - [x] TASK-041 Create app shell
 - [x] TASK-042 Configure routing (including `/login`)
 - [x] TASK-043 Configure Tailwind
-- [ ] TASK-044 Create API client (JWT)
-- [ ] TASK-045 Build login/register UI
-- [ ] TASK-046 Build dashboard
+- [x] TASK-044 Create API client (JWT)
+- [x] TASK-045 Build login/register UI
+- [x] TASK-046 Build dashboard
 - [ ] TASK-047 Build statements page
 - [ ] TASK-048 Build statement detail
 - [ ] TASK-049 Build audits page
