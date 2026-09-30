@@ -6,6 +6,7 @@ import statementsRoutes from './routes/statementsRoutes'
 import auditsRoutes from './routes/auditsRoutes'
 import discrepanciesRoutes from './routes/discrepanciesRoutes'
 import disputesRoutes from './routes/disputesRoutes'
+import n8nRoutes from './routes/n8nRoutes'
 import errorHandler from './middleware/errorHandler'
 
 const app = express()
@@ -18,6 +19,7 @@ app.use('/api/statements', statementsRoutes)
 app.use('/api/audits', auditsRoutes)
 app.use('/api/discrepancies', discrepanciesRoutes)
 app.use('/api/disputes', disputesRoutes)
+app.use('/api/webhooks/n8n', n8nRoutes)
 
 app.get('/', (_req, res) => {
   res.json({

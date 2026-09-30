@@ -185,6 +185,39 @@ User **explicitly** triggers send after reviewing the draft. Backend coordinates
 
 ## 8. Webhooks / n8n
 
+### POST /api/webhooks/n8n/statement-uploaded
+
+Used by the Google Drive-first statement trigger workflow to acknowledge a
+downloaded source file. This endpoint validates metadata and accepts the event
+for later extraction/orchestration; it does not calculate royalties or persist
+audit results.
+
+Requires the `X-N8N-Webhook-Secret` header matching `N8N_WEBHOOK_SECRET`.
+
+Body:
+
+```json
+{
+  "sourceFileId": "google-drive-file-id",
+  "fileName": "statement.csv",
+  "mimeType": "text/csv"
+}
+```
+
+Successful response (`202`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "accepted": true,
+    "sourceFileId": "google-drive-file-id",
+    "fileName": "statement.csv",
+    "mimeType": "text/csv"
+  }
+}
+```
+
 Where n8n needs to notify the backend, use dedicated webhook endpoints such as:
 
 ```text

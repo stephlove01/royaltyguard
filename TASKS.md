@@ -84,13 +84,13 @@
 - [x] TASK-056 Implement deterministic calculation (backend only)
 - [x] TASK-057 Implement discrepancy threshold
 - [x] TASK-058 Persist audit results
-- [ ] TASK-059 Write calculation tests
-- [ ] TASK-060 Write discrepancy tests
+- [x] TASK-059 Write calculation tests
+- [x] TASK-060 Write discrepancy tests
 
 ## Phase 6 — n8n
 
-- [ ] TASK-061 Create statement upload trigger workflow
-- [ ] TASK-062 Connect n8n to backend (HTTP + shared secret)
+- [x] TASK-061 Create statement upload trigger workflow
+- [x] TASK-062 Connect n8n to backend (HTTP + shared secret)
 - [ ] TASK-063 Implement CSV extraction/ingestion
 - [ ] TASK-064 Submit normalized rows to backend
 - [ ] TASK-065 Invoke backend audit API (no n8n royalty math)

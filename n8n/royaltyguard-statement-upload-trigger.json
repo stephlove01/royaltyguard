@@ -1,0 +1,170 @@
+{
+  "name": "RoyaltyGuard - Statement Upload Trigger",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "fileCreated",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "={{$env.ROYALTYGUARD_STATEMENTS_FOLDER_ID}}",
+          "mode": "id"
+        }
+      },
+      "id": "royaltyguard-google-drive-trigger",
+      "name": "Google Drive Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -640,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": "={{$json.id}}",
+        "options": {}
+      },
+      "id": "royaltyguard-download-statement",
+      "name": "Get / Download Statement File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -400,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "keepOnlySet": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "source-file-id",
+              "name": "sourceFileId",
+              "value": "={{$json.id}}",
+              "type": "string"
+            },
+            {
+              "id": "file-name",
+              "name": "fileName",
+              "value": "={{$json.name}}",
+              "type": "string"
+            },
+            {
+              "id": "mime-type",
+              "name": "mimeType",
+              "value": "={{$json.mimeType || 'application/octet-stream'}}",
+              "type": "string"
+            },
+            {
+              "id": "source-system",
+              "name": "sourceSystem",
+              "value": "google_drive",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "royaltyguard-prepare-metadata",
+      "name": "Prepare Statement Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.ROYALTYGUARD_BACKEND_URL || 'http://localhost:5000') + '/api/webhooks/n8n/statement-uploaded'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Webhook-Secret",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({sourceFileId: $json.sourceFileId, fileName: $json.fileName, mimeType: $json.mimeType})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "royaltyguard-backend-intake",
+      "name": "HTTP - RoyaltyGuard Backend Intake",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        120,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get / Download Statement File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get / Download Statement File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Statement Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Statement Metadata": {
+      "main": [
+        [
+          {
+            "node": "HTTP - RoyaltyGuard Backend Intake",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

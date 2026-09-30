@@ -54,13 +54,19 @@ IF Discrepancy
 
 ## 3. Trigger
 
-**MVP trigger:** backend notifies n8n after statement upload (e.g. webhook URL configured in environment).
+**Statement-ingestion trigger:** the first workflow uses a Google Drive Trigger
+to watch the configured statement folder. It downloads the file, prepares
+source metadata, and calls `POST /api/webhooks/n8n/statement-uploaded` with the
+shared `X-N8N-Webhook-Secret` header. The backend acknowledges intake; later
+tasks handle CSV extraction, normalized row submission, and audit execution.
 
 Statements are **fictional CSV files** representing simulated platforms (Spotify, Apple Music, YouTube Music, Audiomack)—see `sample-data/`.
 
-Google Drive triggers are **out of MVP scope** (future enhancement).
+Google Drive is used as the initial statement-ingestion source for this
+workflow. Live streaming platform APIs remain out of MVP scope.
 
-The trigger must create an idempotent processing record.
+The trigger must pass a stable Google Drive file ID as `sourceFileId`. Durable
+processing idempotency is handled by a later workflow task.
 
 ## 4. Extraction
 
