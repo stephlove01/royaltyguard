@@ -54,9 +54,9 @@
 - [x] TASK-032 Add health endpoint
 - [x] TASK-033 Implement auth (register, login, password hash, JWT middleware)
 - [x] TASK-034 Add local filesystem upload storage for statements
-- [ ] TASK-035 Add webhook shared-secret middleware for n8n endpoints
-- [ ] TASK-036 Add statement service
-- [ ] TASK-037 Add statement API
+- [x] TASK-035 Add webhook shared-secret middleware for n8n endpoints
+- [x] TASK-036 Add statement service
+- [x] TASK-037 Add statement API
 - [ ] TASK-038 Add audit API (including run-audit / internal audit engine entry)
 - [ ] TASK-039 Add discrepancy API
 - [ ] TASK-040 Add dispute API (draft + explicit send trigger)

@@ -75,26 +75,32 @@ return `413`. Requests without a valid JWT return `401`.
 
 ### POST /api/statements
 
-Creates a statement record or accepts a statement upload.
+Creates a statement record for a previously uploaded file. Requires
+`Authorization: Bearer <JWT>` and a JSON body containing:
 
-Expected fields may include:
-- artistId
-- platform
-- statementPeriod
-- file
+```json
+{
+  "artistId": 1,
+  "platform": "Spotify",
+  "statementPeriod": "2026-Q1",
+  "fileName": "statement.csv",
+  "storedFilename": "generated-uuid.csv"
+}
+```
 
-Response should include:
-- statement id
-- status
-- metadata
+The `artistId` must belong to the authenticated user, and `storedFilename`
+must refer to a file uploaded by that user. The server derives the stored file
+type and storage path. New statements have status `pending`.
 
 ### GET /api/statements
 
-Returns statements with optional filters.
+Returns all statements belonging to artists owned by the authenticated user.
 
 ### GET /api/statements/:id
 
-Returns statement details and processing status.
+Returns statement details and processing status only when the statement
+belongs to an artist owned by the authenticated user. Missing and inaccessible
+statements both return `404`.
 
 ### POST /api/statements/:id/run-audit
 
@@ -159,7 +165,9 @@ POST /api/webhooks/n8n/audit-completed
 POST /api/webhooks/n8n/dispute-updated
 ```
 
-Webhook requests must include a **shared secret** header (e.g. `X-Webhook-Secret`) matching server `N8N_WEBHOOK_SECRET`. Reject missing or invalid values with `401` or `403`.
+Webhook requests must include the `X-N8N-Webhook-Secret` header matching the
+server's `N8N_WEBHOOK_SECRET`. Reject missing configuration, missing headers,
+and invalid values with `401`.
 
 ## 9. Status Codes
 

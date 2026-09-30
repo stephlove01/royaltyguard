@@ -4,16 +4,13 @@ import { randomUUID } from 'node:crypto'
 import { NextFunction, Request, RequestHandler, Response } from 'express'
 import multer from 'multer'
 import { AuthenticatedRequest } from './authenticateToken'
+import { getUserStatementDirectory } from '../utils/statementStorage'
 
 const maxFileSize = 10 * 1024 * 1024
 
 const storage = multer.diskStorage({
   destination: (req, _file, callback) => {
-    const uploadDirectory = resolve(process.env.UPLOAD_DIR || 'uploads')
-    const userDirectory = resolve(
-      uploadDirectory,
-      `user-${(req as AuthenticatedRequest).user.id}`,
-    )
+    const userDirectory = getUserStatementDirectory((req as AuthenticatedRequest).user.id)
 
     mkdir(userDirectory, { recursive: true })
       .then(() => callback(null, userDirectory))
