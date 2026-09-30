@@ -1,8 +1,17 @@
 import { PoolConnection, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../database'
+import {
+  findOrCreateAudit,
+  markAuditFailed,
+  persistCompletedAudit,
+  readAudit,
+  readDiscrepancies,
+} from './auditPersistenceService'
 import { normalizeRoyaltyRow } from './normalizationService'
 import { CanonicalRoyaltyRow } from './royaltySchema'
 import { findApplicableRoyaltyRate } from './royaltyRateService'
+import { calculateRoyalty } from './royaltyCalculationService'
+import { getDiscrepancyThresholdCents } from './discrepancyThresholdService'
 
 interface StatementForAudit extends RowDataPacket {
   id: number
@@ -86,35 +95,6 @@ export type RunAuditResult =
     }
   | { kind: 'completed'; audit: AuditRecord; discrepancies: DiscrepancyRecord[] }
 
-const centsPerUnit = 100n
-const microUnitsPerRate = 1_000_000n
-const microUnitsPerCent = 10_000n
-
-function parseScaledDecimal(value: string, scale: number): bigint {
-  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value)
-
-  if (!match) {
-    throw new Error('Invalid decimal value in database or configuration')
-  }
-
-  const fraction = match[3] ?? ''
-
-  if (fraction.length > scale && /[^0]/.test(fraction.slice(scale))) {
-    throw new Error('Decimal value exceeds the supported precision')
-  }
-
-  const scaled = BigInt(match[2]) * 10n ** BigInt(scale) + BigInt(fraction.slice(0, scale).padEnd(scale, '0') || '0')
-  return match[1] === '-' ? -scaled : scaled
-}
-
-function formatCents(cents: bigint): string {
-  const negative = cents < 0n
-  const absolute = negative ? -cents : cents
-  const whole = absolute / centsPerUnit
-  const fraction = (absolute % centsPerUnit).toString().padStart(2, '0')
-  return `${negative ? '-' : ''}${whole}.${fraction}`
-}
-
 function periodStartDate(statementPeriod: string): string | null {
   let date: string | undefined
   const quarter = /^(\d{4})-Q([1-4])$/i.exec(statementPeriod)
@@ -140,80 +120,11 @@ function periodStartDate(statementPeriod: string): string | null {
     : date
 }
 
-function getThresholdCents(): bigint {
-  const configured = process.env.DISCREPANCY_THRESHOLD ?? '0.00'
-  const thresholdCents = parseScaledDecimal(configured, 2)
-
-  if (thresholdCents < 0n) {
-    throw new Error('DISCREPANCY_THRESHOLD must not be negative')
-  }
-
-  return thresholdCents
-}
-
-async function findOrCreateAudit(connection: PoolConnection, statementId: number): Promise<number> {
-  const [rows] = await connection.execute<RowDataPacket[]>(
-    'SELECT id FROM audits WHERE statement_id = ? ORDER BY id LIMIT 1 FOR UPDATE',
-    [statementId],
-  )
-
-  if (rows[0]) {
-    return Number(rows[0].id)
-  }
-
-  const [result] = await connection.execute(
-    'INSERT INTO audits (statement_id, status) VALUES (?, ?)',
-    [statementId, 'pending'],
-  )
-  return Number((result as { insertId: number }).insertId)
-}
-
-async function readAudit(connection: PoolConnection, auditId: number): Promise<AuditRecord> {
-  const [rows] = await connection.execute<AuditRecord[]>(
-    `SELECT id, statement_id AS statementId, status,
-      total_expected AS totalExpected, total_actual AS totalActual,
-      total_difference AS totalDifference, created_at AS createdAt, updated_at AS updatedAt
-    FROM audits WHERE id = ? LIMIT 1`,
-    [auditId],
-  )
-
-  return rows[0]
-}
-
-async function readDiscrepancies(
-  connection: PoolConnection,
-  auditId: number,
-): Promise<DiscrepancyRecord[]> {
-  const [rows] = await connection.execute<DiscrepancyRecord[]>(
-    `SELECT id, audit_id AS auditId, royalty_row_id AS royaltyRowId,
-      expected_amount AS expectedAmount, actual_amount AS actualAmount,
-      difference, threshold, status
-    FROM discrepancies WHERE audit_id = ? ORDER BY id`,
-    [auditId],
-  )
-
-  return rows
-}
-
-async function markAuditFailed(
-  connection: PoolConnection,
-  auditId: number,
-  statementId: number,
-): Promise<AuditRecord> {
-  await connection.execute(
-    `UPDATE audits SET status = 'failed', total_expected = 0,
-      total_actual = 0, total_difference = 0 WHERE id = ?`,
-    [auditId],
-  )
-  await connection.execute("UPDATE statements SET status = 'failed' WHERE id = ?", [statementId])
-  return readAudit(connection, auditId)
-}
-
 export async function runStatementAudit(
   statementId: number,
   userId: number,
 ): Promise<RunAuditResult> {
-  const thresholdCents = getThresholdCents()
+  const thresholdCents = getDiscrepancyThresholdCents()
   const connection = await pool.getConnection()
   let transactionStarted = false
 
@@ -283,8 +194,6 @@ export async function runStatementAudit(
       differenceCents: bigint
     }> = []
     const missingRates: MissingRateRow[] = []
-    let totalExpectedCents = 0n
-    let totalActualCents = 0n
 
     for (const row of canonicalRows) {
       const rate = await findApplicableRoyaltyRate(connection, {
@@ -302,19 +211,8 @@ export async function runStatementAudit(
         continue
       }
 
-      const plays = BigInt(row.eligibleUnits)
-      const rateMicros = parseScaledDecimal(rate.rate, 6)
-      const actualCents = parseScaledDecimal(row.actualPayout, 2)
-
-      if (plays < 0n || rateMicros < 0n) {
-        throw new Error('Royalty rows and rates must not be negative')
-      }
-
-      const expectedCents = (plays * rateMicros + microUnitsPerCent / 2n) / microUnitsPerCent
-      const differenceCents = expectedCents - actualCents
-      calculations.push({ row, expectedCents, actualCents, differenceCents })
-      totalExpectedCents += expectedCents
-      totalActualCents += actualCents
+      const calculation = calculateRoyalty(row.eligibleUnits, rate.rate, row.actualPayout)
+      calculations.push({ row, ...calculation })
     }
 
     if (missingRates.length > 0) {
@@ -330,55 +228,18 @@ export async function runStatementAudit(
       }
     }
 
-    await connection.execute(
-      "UPDATE discrepancies SET status = 'resolved' WHERE audit_id = ? AND status <> 'resolved'",
-      [auditId],
+    await persistCompletedAudit(
+      connection,
+      auditId,
+      statement.id,
+      calculations.map((calculation) => ({
+        royaltyRowId: calculation.row.id,
+        expectedCents: calculation.expectedCents,
+        actualCents: calculation.actualCents,
+        differenceCents: calculation.differenceCents,
+      })),
+      thresholdCents,
     )
-
-    for (const calculation of calculations) {
-      if (calculation.differenceCents > thresholdCents) {
-        const values = [
-          formatCents(calculation.expectedCents),
-          formatCents(calculation.actualCents),
-          formatCents(calculation.differenceCents),
-          formatCents(thresholdCents),
-        ]
-        const [existing] = await connection.execute<RowDataPacket[]>(
-          `SELECT id FROM discrepancies
-          WHERE audit_id = ? AND royalty_row_id = ?
-          ORDER BY id LIMIT 1 FOR UPDATE`,
-          [auditId, calculation.row.id],
-        )
-
-        if (existing[0]) {
-          await connection.execute(
-            `UPDATE discrepancies
-            SET expected_amount = ?, actual_amount = ?, difference = ?, threshold = ?, status = 'open'
-            WHERE id = ?`,
-            [...values, existing[0].id],
-          )
-        } else {
-          await connection.execute(
-            `INSERT INTO discrepancies (
-              audit_id, royalty_row_id, expected_amount, actual_amount, difference, threshold
-            ) VALUES (?, ?, ?, ?, ?, ?)`,
-            [auditId, calculation.row.id, ...values],
-          )
-        }
-      }
-    }
-
-    await connection.execute(
-      `UPDATE audits SET status = 'completed', total_expected = ?,
-        total_actual = ?, total_difference = ? WHERE id = ?`,
-      [
-        formatCents(totalExpectedCents),
-        formatCents(totalActualCents),
-        formatCents(totalExpectedCents - totalActualCents),
-        auditId,
-      ],
-    )
-    await connection.execute("UPDATE statements SET status = 'completed' WHERE id = ?", [statement.id])
 
     const audit = await readAudit(connection, auditId)
     const discrepancies = await readDiscrepancies(connection, auditId)

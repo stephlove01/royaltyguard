@@ -81,9 +81,9 @@
 - [x] TASK-053 Define canonical royalty schema
 - [x] TASK-054 Implement normalization
 - [x] TASK-055 Implement rate lookup (MySQL demo rates)
-- [ ] TASK-056 Implement deterministic calculation (backend only)
-- [ ] TASK-057 Implement discrepancy threshold
-- [ ] TASK-058 Persist audit results
+- [x] TASK-056 Implement deterministic calculation (backend only)
+- [x] TASK-057 Implement discrepancy threshold
+- [x] TASK-058 Persist audit results
 - [ ] TASK-059 Write calculation tests
 - [ ] TASK-060 Write discrepancy tests
 
