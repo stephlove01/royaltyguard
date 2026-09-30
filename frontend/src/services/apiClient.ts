@@ -18,19 +18,22 @@ interface ApiErrorBody {
     message?: string
     details?: unknown
   }
+  data?: unknown
 }
 
 export class ApiError extends Error {
   status: number
   code?: string
   details?: unknown
+  data?: unknown
 
-  constructor(message: string, status: number, code?: string, details?: unknown) {
+  constructor(message: string, status: number, code?: string, details?: unknown, data?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.code = code
     this.details = details
+    this.data = data
   }
 }
 
@@ -116,6 +119,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
       response.status,
       errorBody?.error?.code,
       errorBody?.error?.details,
+      errorBody?.data,
     )
   }
 

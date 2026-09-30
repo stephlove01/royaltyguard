@@ -3,13 +3,14 @@
 @theme {
 	--font-sans: "Aptos", "Segoe UI Variable", "Segoe UI", sans-serif;
 	--font-display: "Baskerville", "Times New Roman", serif;
-	--color-canvas: #f3f5f1;
-	--color-ink: #1d2925;
-	--color-muted: #77837d;
-	--color-line: #e1e6e0;
-	--color-pine: #28584d;
-	--color-pine-deep: #173b33;
-	--color-signal: #c6ef75;
+	--color-canvas: #f7f5f8;
+	--color-ink: #28242d;
+	--color-muted: #79737f;
+	--color-line: #e7e2ea;
+	--color-brand: #624582;
+	--color-brand-deep: #30223f;
+	--color-brand-accent: #d9c9ea;
+	--color-lavender: #eee8f3;
 }
 
 * {
@@ -18,7 +19,7 @@
 
 html {
 	min-width: 320px;
-	background: #f3f5f1;
+	background: #f7f5f8;
 }
 
 body {
@@ -35,8 +36,8 @@ a {
 }
 
 ::selection {
-	color: #173b33;
-	background: #c6ef75;
+	color: #30223f;
+	background: #d9c9ea;
 }
 
 .page-enter {

@@ -69,9 +69,9 @@
 - [x] TASK-044 Create API client (JWT)
 - [x] TASK-045 Build login/register UI
 - [x] TASK-046 Build dashboard
-- [ ] TASK-047 Build statements page
-- [ ] TASK-048 Build statement detail
-- [ ] TASK-049 Build audits page
+- [x] TASK-047 Build statements page
+- [x] TASK-048 Build statement detail
+- [x] TASK-049 Build audits page
 - [ ] TASK-050 Build discrepancy page
 - [ ] TASK-051 Build disputes page (review draft, explicit send)
 - [ ] TASK-052 Add loading/error/empty states

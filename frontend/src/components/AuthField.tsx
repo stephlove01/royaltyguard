@@ -18,7 +18,7 @@ function AuthField({ label, error, id, className, ...inputProps }: AuthFieldProp
         id={id}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
-        className={`min-h-12 w-full rounded-lg border bg-white px-3.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus-visible:border-pine focus-visible:ring-3 focus-visible:ring-pine/15 ${
+        className={`min-h-12 w-full rounded-lg border bg-white px-3.5 text-sm text-ink outline-none transition placeholder:text-muted/70 focus-visible:border-brand focus-visible:ring-3 focus-visible:ring-brand/15 ${
           error ? 'border-red-700' : 'border-line'
         } ${className ?? ''}`}
       />

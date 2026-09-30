@@ -12,15 +12,21 @@ const workspaceLinks = [
 
 function Brand() {
   return (
-    <NavLink className="group flex items-center gap-3" to="/dashboard" aria-label="RoyaltyGuard home">
-      <span className="relative grid size-10 place-items-center overflow-hidden rounded-xl bg-signal text-sm font-black tracking-wide text-pine-deep">
+    <NavLink
+      className="group flex items-center gap-3"
+      to="/dashboard"
+      aria-label="RoyaltyGuard — Independent Musician Royalty Leakage Detective"
+    >
+      <span className="relative grid size-10 place-items-center overflow-hidden rounded-xl bg-brand-accent text-sm font-black tracking-wide text-brand-deep">
         RG
         <span className="absolute bottom-0 left-0 h-1 w-full bg-white/35" />
       </span>
       <span className="leading-tight">
-        <span className="block font-display text-[1.28rem] font-semibold text-white">RoyaltyGuard</span>
-        <span className="mt-1 block text-[0.62rem] font-semibold uppercase tracking-[0.17em] text-white/55">
-          Royalty operations
+        <span className="block max-w-[190px] font-display text-[1.12rem] font-semibold leading-5 text-white">
+          RoyaltyGuard
+        </span>
+        <span className="mt-1 block max-w-[190px] text-[0.62rem] font-medium leading-4 text-white/65">
+          — Independent Musician Royalty Leakage Detective
         </span>
       </span>
     </NavLink>
@@ -41,18 +47,18 @@ function WorkspaceNav({ mobile = false }: { mobile?: boolean }) {
             mobile
               ? `inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-signal text-pine-deep'
+                    ? 'bg-brand-accent text-brand-deep'
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
                 }`
               : `group flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-white/12 text-white'
+                    ? 'border-l-2 border-brand-accent bg-brand-accent/10 text-white'
                     : 'text-white/65 hover:bg-white/8 hover:text-white'
                 }`
           }
         >
           {!mobile && (
-            <span className="w-5 font-mono text-[0.62rem] text-white/35">
+            <span className="w-5 font-mono text-[0.62rem] text-white/45">
               {link.marker}
             </span>
           )}
@@ -75,7 +81,7 @@ function AppShell() {
   return (
     <div className="min-h-screen bg-canvas text-ink">
       <div className="mx-auto min-h-screen max-w-[1680px] lg:grid lg:grid-cols-[258px_minmax(0,1fr)]">
-        <aside className="hidden min-h-screen flex-col bg-pine-deep px-5 py-6 text-white lg:flex">
+        <aside className="hidden min-h-screen flex-col bg-brand-deep px-5 py-6 text-white lg:flex">
           <Brand />
           <div className="mb-3 mt-12 px-3 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-white/40">
             Workspace
@@ -83,7 +89,7 @@ function AppShell() {
           <WorkspaceNav />
           <div className="mt-auto border-t border-white/10 pt-5">
             <div className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-3">
-              <span className="grid size-9 place-items-center rounded-lg border border-white/15 font-mono text-xs text-signal">
+              <span className="grid size-9 place-items-center rounded-lg border border-white/20 font-mono text-xs text-brand-accent">
                 RG
               </span>
               <span>
@@ -109,7 +115,7 @@ function AppShell() {
                 {user?.name || user?.email || 'Account'}
               </span>
               <button
-                className="min-h-10 rounded-lg border border-line px-3 text-sm font-semibold text-ink transition-colors hover:border-pine/40 hover:text-pine focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pine"
+                className="min-h-10 rounded-lg border border-line px-3 text-sm font-semibold text-ink transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
                 onClick={handleSignOut}
                 type="button"
               >
@@ -118,7 +124,7 @@ function AppShell() {
             </nav>
           </header>
 
-          <div className="overflow-x-auto border-b border-line bg-pine-deep lg:hidden">
+          <div className="overflow-x-auto border-b border-line bg-brand-deep lg:hidden">
             <WorkspaceNav mobile />
           </div>
 
@@ -129,7 +135,7 @@ function AppShell() {
           <footer className="flex min-h-12 items-center justify-between border-t border-line px-5 text-[0.68rem] text-muted sm:px-8 lg:px-12">
             <span>RoyaltyGuard</span>
             <span className="inline-flex items-center gap-2">
-              <span className="size-1.5 rounded-full bg-signal" />
+              <span className="size-1.5 rounded-full bg-brand-accent" />
               Demo environment
             </span>
           </footer>

@@ -65,8 +65,8 @@ function DashboardPage() {
     <div className="page-enter mx-auto max-w-7xl">
       <section className="flex flex-col justify-between gap-7 border-b border-line pb-8 sm:flex-row sm:items-end sm:pb-10">
         <div>
-          <p className="mb-3 text-[0.66rem] font-bold uppercase tracking-[0.2em] text-pine">
-            RoyaltyGuard
+          <p className="mb-3 text-[0.66rem] font-bold uppercase tracking-[0.2em] text-brand">
+            Workspace overview
           </p>
           <h1 className="font-display text-4xl font-medium leading-tight text-ink sm:text-5xl">
             Royalty operations
@@ -77,7 +77,7 @@ function DashboardPage() {
           </p>
         </div>
         <Link
-          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-3 rounded-lg bg-pine px-4 text-sm font-semibold text-white transition-colors hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pine"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-3 rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           to="/statements"
         >
           <span aria-hidden="true" className="text-lg leading-none">+</span>
@@ -139,7 +139,7 @@ function DashboardPage() {
                     aria-hidden="true"
                     className={`grid size-9 shrink-0 place-items-center rounded-lg border font-mono text-[0.65rem] font-bold ${
                       activity.kind === 'audit'
-                        ? 'border-pine/20 bg-pine/5 text-pine'
+                        ? 'border-brand/20 bg-lavender text-brand'
                         : 'border-line bg-white text-muted'
                     }`}
                   >
@@ -176,11 +176,11 @@ function DashboardPage() {
               <li key={link.to}>
                 <Link className="group flex items-center justify-between gap-3 py-4" to={link.to}>
                   <span>
-                    <span className="block text-sm font-semibold text-ink group-hover:text-pine">{link.label}</span>
+                    <span className="block text-sm font-semibold text-ink group-hover:text-brand">{link.label}</span>
                     <span className="mt-1 block text-xs text-muted">{link.note}</span>
                   </span>
                   <span className="font-mono text-[0.65rem] text-muted" aria-hidden="true">
-                    0{index + 1} <span className="ml-2 text-pine">→</span>
+                    0{index + 1} <span className="ml-2 text-brand">→</span>
                   </span>
                 </Link>
               </li>

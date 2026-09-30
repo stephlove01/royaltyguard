@@ -52,7 +52,7 @@ function LoginPage() {
   return (
     <AuthLayout>
       <div className="page-enter">
-        <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-pine">Welcome back</p>
+        <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-brand">Welcome back</p>
         <h2 className="mt-3 font-display text-4xl font-medium text-ink">Sign in</h2>
         <p className="mt-3 text-sm leading-6 text-muted">Return to your royalty workspace.</p>
 
@@ -89,7 +89,7 @@ function LoginPage() {
           )}
 
           <button
-            className="flex min-h-12 w-full items-center justify-center rounded-lg bg-pine px-4 text-sm font-semibold text-white transition-colors hover:bg-pine-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pine disabled:cursor-wait disabled:opacity-65"
+            className="flex min-h-12 w-full items-center justify-center rounded-lg bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-deep focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-wait disabled:opacity-65"
             type="submit"
             disabled={isSubmitting}
           >
@@ -102,7 +102,7 @@ function LoginPage() {
 
         <p className="mt-7 text-center text-sm text-muted">
           New to RoyaltyGuard?{' '}
-          <Link className="font-semibold text-pine underline decoration-pine/30 underline-offset-4 hover:decoration-pine" to="/register">
+          <Link className="font-semibold text-brand underline decoration-brand/30 underline-offset-4 hover:decoration-brand" to="/register">
             Create an account
           </Link>
         </p>
