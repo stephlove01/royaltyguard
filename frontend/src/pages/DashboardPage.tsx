@@ -4,6 +4,7 @@ import { ApiError } from '../services/apiClient'
 import { getDashboardData } from '../services/royaltyguardApi'
 import type { DashboardData } from '../services/royaltyguardApi'
 import { useAuth } from '../hooks/useAuth'
+import { EmptyState, ErrorState, LoadingState } from '../components/PageComponents'
 
 const quickLinks = [
   { label: 'Statements', to: '/statements', note: 'Source documents' },
@@ -98,23 +99,15 @@ function DashboardPage() {
       </section>
 
       {error && (
-        <section className="mb-7 flex flex-col gap-4 border-l-2 border-red-700 bg-red-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between" role="alert">
-          <div>
-            <h2 className="text-sm font-semibold text-red-950">Dashboard unavailable</h2>
-            <p className="mt-1 text-sm leading-5 text-red-900">{error}</p>
-          </div>
-          <button
-            className="min-h-10 self-start rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-950 hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800 sm:self-center"
-            onClick={() => {
-              setError('')
-              setIsLoading(true)
-              setReloadKey((current) => current + 1)
-            }}
-            type="button"
-          >
-            Try again
-          </button>
-        </section>
+        <ErrorState
+          title="Dashboard unavailable"
+          message={error}
+          onRetry={() => {
+            setError('')
+            setIsLoading(true)
+            setReloadKey((current) => current + 1)
+          }}
+        />
       )}
 
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_minmax(250px,0.8fr)] lg:gap-14">
@@ -130,7 +123,7 @@ function DashboardPage() {
           </div>
 
           {isLoading ? (
-            <p className="py-8 text-sm text-muted" role="status">Loading account activity...</p>
+            <LoadingState label="Loading account activity..." />
           ) : dashboard?.recentActivity.length ? (
             <ul className="divide-y divide-line">
               {dashboard.recentActivity.map((activity) => (
@@ -157,12 +150,10 @@ function DashboardPage() {
               ))}
             </ul>
           ) : (
-            <div className="py-8">
-              <h3 className="text-sm font-semibold text-ink">No activity yet</h3>
-              <p className="mt-2 max-w-md text-sm leading-6 text-muted">
-                Your recent statements and completed audits will appear here when they are available.
-              </p>
-            </div>
+            <EmptyState
+              title="No activity yet"
+              description="Your recent statements and completed audits will appear here when they are available."
+            />
           )}
         </section>
 

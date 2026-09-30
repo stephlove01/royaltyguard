@@ -61,6 +61,33 @@ export interface AuditDetail {
   discrepancies: AuditDiscrepancy[]
 }
 
+export interface DiscrepancyRecord extends AuditDiscrepancy {
+  statementId: number
+  platform: string
+  statementPeriod: string
+  createdAt: string
+}
+
+export interface DisputeRecord {
+  id: number
+  discrepancyId: number
+  recipient: string
+  subject: string
+  body: string
+  status: string
+  sentAt: string | null
+  responseAt: string | null
+  followUpAt: string | null
+  createdAt: string
+  updatedAt: string
+  difference?: string
+  expectedAmount?: string
+  actualAmount?: string
+  statementId?: number
+  platform?: string
+  statementPeriod?: string
+}
+
 export interface StatementUploadResult {
   originalFilename: string
   storedFilename: string
@@ -90,6 +117,9 @@ type RegisterResponse = ApiEnvelope<{ user: ApiUser }>
 type StatementsResponse = ApiEnvelope<{ statements: StatementOverview[] }>
 type StatementResponse = ApiEnvelope<{ statement: StatementOverview }>
 type AuditResponse = ApiEnvelope<AuditDetail>
+type DiscrepancyResponse = ApiEnvelope<{ discrepancy: DiscrepancyRecord }>
+type DisputesResponse = PaginatedResponse<DisputeRecord>
+type DisputeResponse = ApiEnvelope<{ dispute: DisputeRecord }>
 
 export async function login(email: string, password: string): Promise<LoginResponse['data']> {
   const response = await apiPost<LoginResponse>('/auth/login', { email, password })
@@ -187,4 +217,45 @@ export async function runAudit(
     ApiEnvelope<{ audit: AuditOverview; discrepancies: AuditDiscrepancy[] }>
   >(`/statements/${statementId}/run-audit`, {})
   return response.data
+}
+
+export async function getDiscrepancies(
+  page = 1,
+  limit = 100,
+): Promise<PaginatedResponse<DiscrepancyRecord>> {
+  return apiGet<PaginatedResponse<DiscrepancyRecord>>(
+    `/discrepancies?page=${page}&limit=${limit}`,
+  )
+}
+
+export async function getDiscrepancy(discrepancyId: number): Promise<DiscrepancyRecord> {
+  const response = await apiGet<DiscrepancyResponse>(`/discrepancies/${discrepancyId}`)
+  return response.data.discrepancy
+}
+
+export async function createDispute(input: {
+  discrepancyId: number
+  recipient: string
+  subject: string
+  body: string
+}): Promise<DisputeRecord> {
+  const response = await apiPost<DisputeResponse>('/disputes', input)
+  return response.data.dispute
+}
+
+export async function getDisputes(
+  page = 1,
+  limit = 100,
+): Promise<PaginatedResponse<DisputeRecord>> {
+  return apiGet<DisputesResponse>(`/disputes?page=${page}&limit=${limit}`)
+}
+
+export async function getDispute(disputeId: number): Promise<DisputeRecord> {
+  const response = await apiGet<DisputeResponse>(`/disputes/${disputeId}`)
+  return response.data.dispute
+}
+
+export async function sendDispute(disputeId: number): Promise<DisputeRecord> {
+  const response = await apiPost<DisputeResponse>(`/disputes/${disputeId}/send`, {})
+  return response.data.dispute
 }

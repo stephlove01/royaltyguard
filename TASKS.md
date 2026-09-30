@@ -72,9 +72,9 @@
 - [x] TASK-047 Build statements page
 - [x] TASK-048 Build statement detail
 - [x] TASK-049 Build audits page
-- [ ] TASK-050 Build discrepancy page
-- [ ] TASK-051 Build disputes page (review draft, explicit send)
-- [ ] TASK-052 Add loading/error/empty states
+- [x] TASK-050 Build discrepancy page
+- [x] TASK-051 Build disputes page (review draft, explicit send)
+- [x] TASK-052 Add loading/error/empty states
 
 ## Phase 5 — Audit Engine
 
