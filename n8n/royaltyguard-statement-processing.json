@@ -1,0 +1,772 @@
+{
+  "name": "RoyaltyGuard - Statement Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "event": "fileCreated",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "={{$env.ROYALTYGUARD_STATEMENTS_FOLDER_ID}}",
+          "mode": "id"
+        }
+      },
+      "id": "royaltyguard-processing-drive-trigger",
+      "name": "Google Drive Trigger",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json.id}}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "id": "royaltyguard-processing-download",
+      "name": "Get / Download Statement File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -820,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "processing-source-file-id",
+              "name": "sourceFileId",
+              "value": "={{$('Google Drive Trigger').item.json.id}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-file-name",
+              "name": "fileName",
+              "value": "={{$('Google Drive Trigger').item.json.name || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-mime-type",
+              "name": "mimeType",
+              "value": "={{$('Google Drive Trigger').item.json.mimeType || 'application/octet-stream'}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-source-location",
+              "name": "sourceLocation",
+              "value": "={{$('Google Drive Trigger').item.json.webViewLink || ('https://drive.google.com/open?id=' + $('Google Drive Trigger').item.json.id)}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-created-time",
+              "name": "createdTime",
+              "value": "={{$('Google Drive Trigger').item.json.createdTime || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-modified-time",
+              "name": "modifiedTime",
+              "value": "={{$('Google Drive Trigger').item.json.modifiedTime || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-platform",
+              "name": "platform",
+              "value": "={{$('Google Drive Trigger').item.json.appProperties?.platform || $env.ROYALTYGUARD_PLATFORM || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "processing-statement-period",
+              "name": "statementPeriod",
+              "value": "={{$('Google Drive Trigger').item.json.appProperties?.statementPeriod || $env.ROYALTYGUARD_STATEMENT_PERIOD || ''}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeBinary": true
+        }
+      },
+      "id": "royaltyguard-processing-metadata",
+      "name": "Prepare Statement Metadata",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "return $input.all().map((item) => {\n  const fileName = String(item.json.fileName || '');\n  const mimeType = String(item.json.mimeType || '').toLowerCase();\n  if (!fileName.toLowerCase().endsWith('.csv') && !['text/csv', 'application/csv'].includes(mimeType)) {\n    throw new Error('Unsupported statement format: this workflow accepts CSV files only');\n  }\n  return item;\n});"
+      },
+      "id": "royaltyguard-processing-validate-csv",
+      "name": "Validate Supported CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "binaryPropertyName": "data",
+        "options": {
+          "delimiter": ",",
+          "enableBOM": true,
+          "headerRow": true,
+          "relaxQuotes": false,
+          "skipRecordsWithErrors": {
+            "value": {
+              "enabled": false
+            }
+          }
+        }
+      },
+      "id": "royaltyguard-processing-extract-csv",
+      "name": "Extract From File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{JSON.stringify($json)}}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"trackName\": { \"type\": \"string\", \"description\": \"Track title copied from the statement row\" },\n    \"eligibleUnits\": { \"type\": \"string\", \"description\": \"Whole-number plays or eligible units copied verbatim as digits\" },\n    \"territory\": { \"type\": \"string\", \"description\": \"Territory code copied from the row\" },\n    \"tier\": { \"type\": \"string\", \"description\": \"Rate tier copied from the row, or an empty string when absent\" },\n    \"actualPayout\": { \"type\": \"string\", \"description\": \"Reported payout copied verbatim as a decimal string; do not calculate or modify it\" }\n  },\n  \"required\": [\"trackName\", \"eligibleUnits\", \"territory\", \"tier\", \"actualPayout\"]\n}",
+        "options": {
+          "systemPromptTemplate": "Extract and map only facts present in the supplied CSV row. Map source aliases such as track/track_name/title, plays/streams/units, territory/country, and actual_payout/payout. Preserve the exact numeric text for eligibleUnits and actualPayout as strings. If a required value is missing, return an empty string for that field. Never infer a missing value, rate, expected payout, difference, shortfall, or discrepancy."
+        }
+      },
+      "id": "royaltyguard-processing-information-extractor",
+      "name": "Advanced AI Extract",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const extracted = $input.all();\nconst sourceRows = $('Extract From File').all();\nif (extracted.length !== sourceRows.length) throw new Error('AI extraction output count does not match CSV row count');\nfunction sourceValue(row, aliases, field) {\n  for (const alias of aliases) {\n    const value = row[alias];\n    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();\n  }\n  throw new Error('CSV row is missing ' + field);\n}\nfor (let index = 0; index < extracted.length; index++) {\n  const output = extracted[index].json.output;\n  const source = sourceRows[index].json;\n  if (!output || typeof output !== 'object') throw new Error('AI extraction returned no structured output');\n  const originalUnits = sourceValue(source, ['eligibleUnits', 'eligible_units', 'plays', 'streams', 'units'], 'eligibleUnits');\n  const originalPayout = sourceValue(source, ['actualPayout', 'actual_payout', 'payout', 'royalty'], 'actualPayout');\n  if (String(output.eligibleUnits ?? '').trim() !== originalUnits) throw new Error('AI output changed eligibleUnits from the CSV source');\n  if (String(output.actualPayout ?? '').trim() !== originalPayout) throw new Error('AI output changed actualPayout from the CSV source');\n  const originalTrack = sourceValue(source, ['trackName', 'track_name', 'track', 'title'], 'trackName');\n  if (String(output.trackName ?? '').trim() !== originalTrack) throw new Error('AI output changed trackName from the CSV source');\n  const originalTerritory = sourceValue(source, ['territory', 'country', 'countryCode'], 'territory').toUpperCase();\n  if (String(output.territory ?? '').trim().toUpperCase() !== originalTerritory) throw new Error('AI output changed territory from the CSV source');\n}\nreturn extracted;"
+      },
+      "id": "royaltyguard-processing-validate-ai-output",
+      "name": "Validate AI Output Against CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3-flash-preview",
+        "options": {}
+      },
+      "id": "royaltyguard-processing-gemini-chat-model",
+      "name": "Google Gemini Chat Model - Configure Credential",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const extracted = $input.all();\nconst sourceRows = $('Extract From File').all();\nconst metadataItems = $('Prepare Statement Metadata').all();\nif (extracted.length !== sourceRows.length) throw new Error('AI extraction output count does not match CSV row count');\nconst statements = new Map();\nfunction requiredText(value, field) {\n  if (typeof value !== 'string' || value.trim() === '') throw new Error('CSV row is missing ' + field);\n  return value.trim();\n}\nfor (let index = 0; index < extracted.length; index++) {\n  const sourceRow = sourceRows[index];\n  const pairedItem = Array.isArray(sourceRow.pairedItem) ? sourceRow.pairedItem[0]?.item : sourceRow.pairedItem?.item;\n  const metadata = metadataItems[pairedItem ?? 0]?.json;\n  const row = extracted[index].json.output;\n  if (!metadata || !row || typeof row !== 'object') throw new Error('Could not match extracted fields to statement metadata');\n  const key = String(metadata.sourceFileId || '');\n  if (!key) throw new Error('Google Drive source file ID is missing');\n  const platform = String(metadata.platform || '').trim();\n  const statementPeriod = String(metadata.statementPeriod || '').trim();\n  if (!platform) throw new Error('Set ROYALTYGUARD_PLATFORM or provide Drive appProperties.platform');\n  if (!statementPeriod) throw new Error('Set ROYALTYGUARD_STATEMENT_PERIOD or provide Drive appProperties.statementPeriod');\n  let statement = statements.get(key);\n  if (!statement) {\n    statement = {\n      platform,\n      statementPeriod,\n      rows: [],\n      sourceMetadata: {\n        sourceFileId: metadata.sourceFileId,\n        fileName: metadata.fileName,\n        mimeType: metadata.mimeType,\n        sourceLocation: metadata.sourceLocation,\n        createdTime: metadata.createdTime || undefined,\n        modifiedTime: metadata.modifiedTime || undefined\n      }\n    };\n    statements.set(key, statement);\n  }\n  const eligibleUnits = requiredText(row.eligibleUnits, 'eligibleUnits');\n  if (!/^\\d+$/.test(eligibleUnits)) throw new Error('eligibleUnits must be a non-negative whole-number string');\n  const actualPayout = requiredText(row.actualPayout, 'actualPayout');\n  if (!/^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$/.test(actualPayout)) throw new Error('actualPayout must be a non-negative decimal string with at most two fractional digits');\n  statement.rows.push({\n    trackName: requiredText(row.trackName, 'trackName'),\n    eligibleUnits,\n    territory: requiredText(row.territory, 'territory').toUpperCase(),\n    tier: typeof row.tier === 'string' && row.tier.trim() ? row.tier.trim() : null,\n    actualPayout\n  });\n}\nreturn Array.from(statements.values(), (statement) => ({ json: statement }));"
+      },
+      "id": "royaltyguard-processing-canonical-data",
+      "name": "Prepare Canonical Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.ROYALTYGUARD_BACKEND_URL || 'http://localhost:5000') + '/api/webhooks/n8n/statements'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Webhook-Secret",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify({platform: $json.platform, statementPeriod: $json.statementPeriod, rows: $json.rows, sourceMetadata: $json.sourceMetadata})}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "royaltyguard-processing-submit-rows",
+      "name": "HTTP - Submit Statement / Rows to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const submitted = $input.all();\nconst statements = $('Prepare Canonical Data').all();\nif (submitted.length !== statements.length) throw new Error('Backend statement acknowledgement count does not match input');\nconst output = [];\nfor (let index = 0; index < statements.length; index++) {\n  const statement = statements[index].json;\n  const statementId = submitted[index].json.data?.statementId;\n  if (!Number.isSafeInteger(Number(statementId)) || Number(statementId) < 1) throw new Error('Backend did not return a valid statementId');\n  for (const row of statement.rows) {\n    output.push({ json: { statementId: Number(statementId), platform: statement.platform, statementPeriod: statement.statementPeriod, sourceMetadata: statement.sourceMetadata, ...row } });\n  }\n}\nreturn output;"
+      },
+      "id": "royaltyguard-processing-expand-rate-rows",
+      "name": "Expand Rows For Rate Retrieval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.ROYALTYGUARD_RATE_API_URL || (($env.ROYALTYGUARD_BACKEND_URL || 'http://localhost:5000') + '/api/webhooks/n8n/royalty-rate')}}",
+        "sendQuery": true,
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Webhook-Secret",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "platform",
+              "value": "={{$json.platform}}"
+            },
+            {
+              "name": "territory",
+              "value": "={{$json.territory}}"
+            },
+            {
+              "name": "tier",
+              "value": "={{$json.tier || ''}}"
+            },
+            {
+              "name": "statementPeriod",
+              "value": "={{$json.statementPeriod}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "royaltyguard-processing-get-rate",
+      "name": "HTTP Request - Get Royalty Rate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const rateResponses = $input.all();\nconst rows = $('Expand Rows For Rate Retrieval').all();\nif (rateResponses.length !== rows.length) throw new Error('Rate response count does not match royalty row count');\nfunction parseScaledDecimal(value, scale, field) {\n  const text = String(value);\n  const match = /^(0|[1-9]\\d*)(?:\\.(\\d+))?$/.exec(text);\n  if (!match) throw new Error(field + ' must be a non-negative decimal string');\n  const fraction = match[2] || '';\n  if (fraction.length > scale && /[^0]/.test(fraction.slice(scale))) throw new Error(field + ' exceeds supported precision');\n  return BigInt(match[1]) * (10n ** BigInt(scale)) + BigInt(fraction.slice(0, scale).padEnd(scale, '0') || '0');\n}\nfunction formatScaled(value, scale) {\n  const negative = value < 0n;\n  const absolute = negative ? -value : value;\n  const whole = absolute / (10n ** BigInt(scale));\n  const fraction = (absolute % (10n ** BigInt(scale))).toString().padStart(scale, '0');\n  return (negative ? '-' : '') + whole.toString() + '.' + fraction;\n}\nconst thresholdText = String($env.ROYALTYGUARD_DISCREPANCY_THRESHOLD || '0.00');\nconst thresholdCents = parseScaledDecimal(thresholdText, 2, 'threshold');\nreturn rows.map((entry, index) => {\n  const row = entry.json;\n  const response = rateResponses[index].json;\n  const rateValue = response.rate ?? response.data?.rate;\n  if (rateValue === undefined || rateValue === null) throw new Error('Rate API response must contain a rate field');\n  const rateText = String(rateValue);\n  const rateMicros = parseScaledDecimal(rateText, 6, 'rate');\n  const units = BigInt(row.eligibleUnits);\n  const actualCents = parseScaledDecimal(row.actualPayout, 2, 'actualPayout');\n  const expectedCents = (units * rateMicros + 5000n) / 10000n;\n  const differenceCents = expectedCents - actualCents;\n  return { json: {\n    statementId: row.statementId,\n    sourceMetadata: row.sourceMetadata,\n    platform: row.platform,\n    statementPeriod: row.statementPeriod,\n    trackName: row.trackName,\n    eligibleUnits: row.eligibleUnits,\n    territory: row.territory,\n    tier: row.tier,\n    actualPayout: formatScaled(actualCents, 2),\n    rate: rateText,\n    rateSource: response.source ?? response.data?.source ?? null,\n    expectedPayout: formatScaled(expectedCents, 2),\n    difference: formatScaled(differenceCents, 2),\n    shortfall: differenceCents > 0n ? formatScaled(differenceCents, 2) : '0.00',\n    threshold: formatScaled(thresholdCents, 2),\n    isDiscrepancy: differenceCents > thresholdCents\n  } };\n});"
+      },
+      "id": "royaltyguard-processing-calculate",
+      "name": "Code - Calculate Expected Payout",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "royaltyguard-above-threshold",
+              "leftValue": "={{$json.isDiscrepancy}}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "royaltyguard-processing-threshold-if",
+      "name": "IF - Above Threshold?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result-discrepancy",
+              "name": "result",
+              "value": "discrepancy_detected",
+              "type": "string"
+            },
+            {
+              "id": "result-discrepancy-data",
+              "name": "auditResult",
+              "value": "={{$json}}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "royaltyguard-processing-discrepancy-result",
+      "name": "Discrepancy Detected",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1800,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "result-no-discrepancy",
+              "name": "result",
+              "value": "no_discrepancy",
+              "type": "string"
+            },
+            {
+              "id": "result-no-discrepancy-data",
+              "name": "auditResult",
+              "value": "={{$json}}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "royaltyguard-processing-no-discrepancy-result",
+      "name": "No Discrepancy",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1800,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const calculated = $('Code - Calculate Expected Payout').all().map((item) => item.json);\nif (calculated.length === 0) throw new Error('No calculated results are available for persistence');\nfunction parseCents(value, allowNegative) {\n  const text = String(value);\n  const pattern = allowNegative ? /^(-?)(0|[1-9]\\d*)\\.(\\d{2})$/ : /^(0|[1-9]\\d*)\\.(\\d{2})$/;\n  const match = pattern.exec(text);\n  if (!match) throw new Error('Calculated result contains an invalid money value');\n  const negative = allowNegative && match[1] === '-';\n  const whole = allowNegative ? match[2] : match[1];\n  const fraction = allowNegative ? match[3] : match[2];\n  const cents = BigInt(whole) * 100n + BigInt(fraction);\n  return negative ? -cents : cents;\n}\nfunction formatCents(value) {\n  const negative = value < 0n;\n  const absolute = negative ? -value : value;\n  return (negative ? '-' : '') + (absolute / 100n).toString() + '.' + (absolute % 100n).toString().padStart(2, '0');\n}\nconst groups = new Map();\nfor (const result of calculated) {\n  const sourceFileId = String(result.sourceMetadata?.sourceFileId || '');\n  if (!sourceFileId || !Number.isSafeInteger(Number(result.statementId))) throw new Error('Persistence result is missing statement/source identity');\n  let group = groups.get(sourceFileId);\n  if (!group) {\n    group = { statementId: Number(result.statementId), sourceFileId, threshold: result.threshold, totalExpectedCents: 0n, totalActualCents: 0n, totalDifferenceCents: 0n, results: [], discrepancyCount: 0 };\n    groups.set(sourceFileId, group);\n  }\n  if (group.statementId !== Number(result.statementId) || group.threshold !== result.threshold) throw new Error('Inconsistent statement identity or threshold in calculation results');\n  group.totalExpectedCents += parseCents(result.expectedPayout, false);\n  group.totalActualCents += parseCents(result.actualPayout, false);\n  group.totalDifferenceCents += parseCents(result.difference, true);\n  if (result.isDiscrepancy === true) group.discrepancyCount++;\n  group.results.push({ trackName: result.trackName, eligibleUnits: result.eligibleUnits, territory: result.territory, tier: result.tier, actualPayout: result.actualPayout, rate: result.rate, expectedPayout: result.expectedPayout, difference: result.difference, shortfall: result.shortfall, isDiscrepancy: result.isDiscrepancy });\n}\nreturn Array.from(groups.values(), (group) => ({ json: { statementId: group.statementId, sourceFileId: group.sourceFileId, threshold: group.threshold, totalExpected: formatCents(group.totalExpectedCents), totalActual: formatCents(group.totalActualCents), totalDifference: formatCents(group.totalDifferenceCents), discrepancyCount: group.discrepancyCount, results: group.results } }));"
+      },
+      "id": "royaltyguard-processing-package-persistence",
+      "name": "Code - Package Audit Persistence Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{($env.ROYALTYGUARD_BACKEND_URL || 'http://localhost:5000') + '/api/webhooks/n8n/audit-results'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-Webhook-Secret",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "royaltyguard-processing-persist-audit-results",
+      "name": "HTTP - Persist Audit Results to Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2280,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "persisted-audit-result",
+              "name": "result",
+              "value": "audit_result_persisted",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "royaltyguard-processing-persistence-success",
+      "name": "Audit Result Persisted",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const messages = $input.all().map((item) => { const error = item.json.error; return typeof error === 'string' ? error : error?.message || 'HTTP request failed'; });\nthrow new Error('Workflow stopped after bounded HTTP retries: ' + messages.join('; '));"
+      },
+      "id": "royaltyguard-processing-stop-http-error",
+      "name": "Code - Stop On HTTP Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        220
+      ]
+    }
+  ],
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get / Download Statement File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get / Download Statement File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Statement Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Statement Metadata": {
+      "main": [
+        [
+          {
+            "node": "Validate Supported CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Supported CSV": {
+      "main": [
+        [
+          {
+            "node": "Extract From File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract From File": {
+      "main": [
+        [
+          {
+            "node": "Advanced AI Extract",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced AI Extract": {
+      "main": [
+        [
+          {
+            "node": "Validate AI Output Against CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate AI Output Against CSV": {
+      "main": [
+        [
+          {
+            "node": "Prepare Canonical Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model - Configure Credential": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Advanced AI Extract",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Canonical Data": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Submit Statement / Rows to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Submit Statement / Rows to Backend": {
+      "main": [
+        [
+          {
+            "node": "Expand Rows For Rate Retrieval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Stop On HTTP Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Rows For Rate Retrieval": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Get Royalty Rate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Get Royalty Rate": {
+      "main": [
+        [
+          {
+            "node": "Code - Calculate Expected Payout",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Stop On HTTP Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Calculate Expected Payout": {
+      "main": [
+        [
+          {
+            "node": "IF - Above Threshold?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Above Threshold?": {
+      "main": [
+        [
+          {
+            "node": "Discrepancy Detected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Discrepancy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discrepancy Detected": {
+      "main": [
+        [
+          {
+            "node": "Code - Package Audit Persistence Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Discrepancy": {
+      "main": [
+        [
+          {
+            "node": "Code - Package Audit Persistence Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Package Audit Persistence Payload": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Persist Audit Results to Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Persist Audit Results to Backend": {
+      "main": [
+        [
+          {
+            "node": "Audit Result Persisted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Stop On HTTP Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [],
+  "pinData": {}
+}

@@ -21,7 +21,7 @@ Capstone/demo system: fictional financial data, no real payments, no live stream
 ## 2. Engineering Principles
 
 1. Separate concerns.
-2. Keep financial calculations deterministic in the **backend**; n8n and LLMs must not independently compute royalty results.
+2. Keep the primary n8n audit deterministic: retrieve rates through the configured HTTP provider and calculate/threshold in an n8n Code node. LLMs must never calculate financial results. The existing backend calculation services remain for API support and regression tests, not the primary n8n workflow.
 3. Validate all external input.
 4. Make workflows observable.
 5. Prefer explicit contracts over implicit behavior.
@@ -32,7 +32,7 @@ Capstone/demo system: fictional financial data, no real payments, no live stream
 
 ## 3. Financial Calculation Rule
 
-The calculation engine must use explicit code.
+The primary n8n calculation engine must use explicit Code-node logic; AI output is extraction input only.
 
 Example:
 
@@ -71,12 +71,14 @@ Preferred approaches:
 - Decimal-safe calculation library in Node.js.
 - Explicit rounding policy.
 
-RoyaltyGuard audits use integer cents and integer-scaled rate values. Expected
-payouts are rounded half up to two decimal places before totals and differences
-are stored. This MVP uses a configurable `DISCREPANCY_THRESHOLD` (default
-`0.00`) and flags underpayments where expected minus actual is greater than
-that threshold. Missing effective rates fail the audit rather than defaulting
-to zero. These demo rules should be reviewed before production use.
+The n8n Code node uses integer cents and integer-scaled rate values. Expected
+payouts are rounded half up to two decimal places before differences are
+compared. The n8n workflow uses `ROYALTYGUARD_DISCREPANCY_THRESHOLD` (default
+`0.00`) and flags underpayments only when expected minus actual is greater than
+that threshold. A missing or invalid rate fails the workflow; it must never
+default to zero. Existing backend calculation services retain their equivalent
+rules for backend support and regression tests but are not called by the
+primary n8n path.
 
 ## 5. Backend Structure
 
@@ -140,10 +142,14 @@ Use environment variables for:
 - JWT secret and token settings.
 - AI credentials (when used).
 - n8n webhook URLs.
+- `ROYALTYGUARD_RATE_API_URL` for the backend's protected rate-data endpoint (local default: `/api/webhooks/n8n/royalty-rate`).
+- `ROYALTYGUARD_DISCREPANCY_THRESHOLD` for the primary n8n threshold.
 - `N8N_WEBHOOK_SECRET` (shared secret for inbound n8n → backend webhooks).
 - Gmail credentials (via n8n or backend as implemented).
 
-Google Drive credentials are **not** required for MVP (future enhancement only).
+Google Drive and AI model credentials are stored in n8n and are required to run
+the statement extraction workflow. The rate endpoint may require an n8n HTTP
+credential configured for that provider.
 
 Provide `.env.example`; never commit `.env`.
 
@@ -159,24 +165,33 @@ Provide `.env.example`; never commit `.env`.
 
 AI output must be schema-validated before being trusted by downstream logic.
 
-AI extraction should produce structured fields such as:
+AI extraction should produce the canonical row fields and preserve monetary and
+unit values as strings:
 
 ```json
 {
   "platform": "demo_platform",
   "statementPeriod": "2026-Q1",
-  "tracks": [
+  "rows": [
     {
       "trackName": "Example Track",
-      "plays": 100000,
+      "eligibleUnits": "100000",
       "territory": "NG",
-      "actualPayout": 300
+      "tier": null,
+      "actualPayout": "300.00"
     }
   ]
 }
 ```
 
 If required fields are missing or invalid, the workflow should stop or route to review.
+
+The backend remains responsible for authentication, statement metadata/row
+storage, APIs, and persistence of calculated results. The primary workflow
+posts its generated result to `POST /api/webhooks/n8n/audit-results`; that
+endpoint validates and persists the supplied values without recalculating
+them. The primary workflow does not call the existing backend audit
+calculation endpoint.
 
 ## 10. Definition of Done
 

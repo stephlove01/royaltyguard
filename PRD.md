@@ -102,10 +102,10 @@ Different source formats are transformed into a canonical RoyaltyGuard schema.
 The system stores or retrieves the applicable royalty-rate data used for an audit.
 
 ### FR-05 Deterministic Calculation
-The system calculates expected royalty using explicit formulas and stored inputs.
+The primary n8n audit calculates expected royalty in a deterministic Code node using canonical statement values and the rate returned by the configured rate provider. Existing backend calculation services may remain for API support and regression tests but are not called by the primary n8n path.
 
 ### FR-06 Discrepancy Detection
-The system compares expected and actual values and flags differences according to configurable rules.
+The n8n workflow compares expected and actual payouts and applies the configured threshold before branching. AI does not calculate or decide financial results.
 
 ### FR-07 Dispute Generation
 The system generates a draft dispute containing the relevant statement period, tracks, calculations, discrepancy and supporting details.
@@ -156,10 +156,10 @@ An MVP is acceptable when a test statement can be:
 ## 11. Assumptions
 
 - Streaming platforms (Spotify, Apple Music, YouTube Music, Audiomack, etc.) are **simulated data sources** represented by small fictional CSV statements in `sample-data/`.
-- Demo royalty rates are stored in MySQL and are **not** official platform payout rates.
+- The primary n8n audit retrieves rates through a configured HTTP rate-data API; its local adapter uses seeded MySQL demo rates. These rates are **not** official platform payout rates.
 - The initial MVP uses controlled fictional sample data.
 - Email is available through Gmail or another supported provider.
-- n8n is responsible for workflow orchestration, not the primary system of record.
+- n8n is responsible for extraction, rate retrieval, deterministic audit calculation, discrepancy decisions, and later automation; the backend and database remain the application system of record.
 
 ## 12. Risks
 
@@ -175,7 +175,7 @@ An MVP is acceptable when a test statement can be:
 Start with:
 - Fictional CSV statements per simulated platform (e.g. `spotify_statement.csv`, `apple_music_statement.csv`, `youtube_music_statement.csv`, `audiomack_statement.csv` under `sample-data/`).
 - Demo royalty rates in MySQL (example demo values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002—labeled as demo only).
-- Backend-owned deterministic calculation and discrepancy detection.
+- n8n-owned deterministic calculation and discrepancy detection using an explicitly configured rate-provider endpoint.
 - One discrepancy threshold rule.
 - n8n for ingestion orchestration, AI-assisted extraction/drafting where useful, and email after user-approved send.
 - Simple auth: email, password (hashed), JWT.

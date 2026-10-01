@@ -1,6 +1,6 @@
 # RoyaltyGuard — Implementation Plan
 
-**Capstone:** fictional demo data, simulated streaming CSVs, backend-owned math, local file storage, simple JWT auth, n8n for ingestion/automation—not for authoritative calculations.
+**Capstone:** fictional demo data, simulated streaming CSVs, n8n-owned primary audit calculation, backend APIs/persistence with calculation services retained for support and regression, local file storage, simple JWT auth.
 
 ## 1. Implementation Strategy
 
@@ -96,36 +96,39 @@ Tasks:
 Exit criteria:
 - User can upload a test statement and see it in the UI.
 
-## Phase 6 — Audit Engine
+## Phase 6 — Backend Audit/API Support
 
 Tasks:
-- Normalize royalty rows.
-- Implement rate lookup.
-- Implement deterministic calculation.
+- Normalize royalty rows for backend/API support.
+- Retain MySQL rate lookup for backend/API support and regression tests.
+- Retain the existing deterministic backend calculation service for API support and regression tests; it is not the primary n8n calculation path.
 - Create audit records.
 - Create discrepancy records.
 - Add unit tests.
 
 Exit criteria:
-- Known test cases produce expected results.
+- Backend support/regression tests produce known results; the primary n8n workflow does not call this calculation path.
 
-## Phase 7 — n8n Automation
+## Phase 7 — n8n Audit Automation
 
 Tasks:
 - Create webhook trigger after upload.
 - Connect backend (shared-secret webhooks).
-- Extract/normalize CSV (AI optional).
-- **Call backend audit API** for rate lookup, calculation, discrepancy detection.
-- Store results via backend API.
-- Handle errors and idempotency.
+- Extract CSV and use Information Extractor to validate/map canonical rows.
+- Submit statement metadata and normalized rows to backend persistence.
+- Retrieve platform/territory/period rates through the protected backend rate-data API (local MySQL demo adapter; tier unsupported by current schema).
+- Calculate payout and discrepancy threshold in n8n Code/IF nodes.
+- Persist calculated results via the backend API (TASK-067).
+- Add bounded retries with terminal error paths (TASK-068).
+- Use the Drive file ID and unique persistence keys for idempotency (TASK-069).
 
 Exit criteria:
-- End-to-end simulated-platform CSV → audit on dashboard works without n8n performing royalty math.
+- End-to-end simulated-platform CSV → n8n audit calculation → backend-persisted dashboard result works.
 
 ## Phase 8 — AI Integration
 
 Tasks:
-- Define extraction schema.
+- Define and apply the Gemini statement-extraction prompt (TASK-070); keep structured-output schema validation in place.
 - Configure model.
 - Add structured output validation.
 - Add dispute drafting.

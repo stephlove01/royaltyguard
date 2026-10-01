@@ -131,22 +131,22 @@ Store configurable fictional demo rates in MySQL (example seeds: Spotify 0.004, 
 Rates must be auditable and editable without implying real payout contracts.
 
 ### Consequence
-Backend reads rates from the database during audits; documentation and UI must not claim official platform rates.
+The existing backend support audit reads rates from MySQL. The primary n8n workflow retrieves rates from its configured HTTP provider; the seeded values are not silently used by n8n. Documentation and UI must not claim the demo rates are official.
 
 ---
 
 ## ADR-010 — Backend Owns All Royalty Calculations
 
-**Status:** Accepted
+**Status:** Superseded by ADR-015
 
 ### Decision
-Deterministic calculation and discrepancy detection run only in the backend. n8n orchestrates; LLMs never independently compute financial results.
+The original decision made backend calculation and discrepancy detection the only financial path. It is retained here as historical context and is superseded by ADR-015 for the primary n8n audit workflow.
 
 ### Reason
 Aligns with ADR-004 and keeps capstone logic reviewable in one codebase.
 
 ### Consequence
-n8n workflows call backend audit APIs instead of Code-node math for royalties.
+The backend audit service remains for backend/API support and regression tests. The primary n8n workflow no longer calls it for royalty math.
 
 ---
 
@@ -155,13 +155,13 @@ n8n workflows call backend audit APIs instead of Code-node math for royalties.
 **Status:** Accepted
 
 ### Decision
-Store uploaded statement files on the local filesystem for MVP. Google Drive is a future optional enhancement only.
+Store frontend-uploaded statement files on the local filesystem for MVP. The primary n8n path may ingest source files from Google Drive and persist their source URI/metadata without copying them into local upload storage.
 
 ### Reason
 Simplest approach for student development and demo deployment.
 
 ### Consequence
-`storage_location` in MySQL references local paths; production deployment must secure upload directories.
+`storage_location` may reference a local path or Google Drive source URI; production deployment must secure upload directories and Drive credentials.
 
 ---
 
@@ -207,3 +207,20 @@ Beginner-friendly security without full mTLS or OAuth for machine-to-machine cal
 
 ### Consequence
 Document header name and secret in `.env.example`; test rejection of invalid secrets.
+
+---
+
+## ADR-015 — n8n Owns the Primary Royalty Audit Calculation
+
+**Status:** Accepted
+
+### Decision
+The primary n8n statement-audit workflow retrieves an applicable rate through a configurable HTTP provider, performs deterministic royalty calculation in a Code node, and applies the discrepancy threshold in the workflow. AI is limited to extraction and language tasks.
+
+The backend remains responsible for authentication, application APIs, statement/row storage, and persistence of n8n-produced audit results. Existing backend calculation services remain available for backend/API support and regression tests but are not called for financial math by the primary n8n path.
+
+### Reason
+This restores the original automation architecture while retaining backend ownership of application data and avoiding two competing calculation engines in the normal workflow.
+
+### Consequence
+Configure `ROYALTYGUARD_RATE_API_URL` for the primary audit; its local default is the secret-protected backend rate-data endpoint using the seeded MySQL demo rates through `royaltyRateService`. It returns rate data only. The separate `POST /api/webhooks/n8n/audit-results` contract persists calculated n8n results without recomputation and uses the source file ID for idempotency.

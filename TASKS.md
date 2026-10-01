@@ -1,6 +1,6 @@
 # RoyaltyGuard — Task Tracker
 
-**Capstone scope:** fictional demo data, simulated streaming CSVs (no live platform APIs), backend-owned royalty math, local file storage, email/password/JWT auth, user must approve dispute send. See `PRD.md` and `DECISIONS.md`.
+**Capstone scope:** fictional demo data, simulated streaming CSVs (no live platform APIs), n8n-owned primary audit calculation, backend application APIs/persistence with calculation services retained for support and regression, local file storage, email/password/JWT auth, user must approve dispute send. See `PRD.md` and `DECISIONS.md`.
 
 ## Status Legend
 
@@ -76,12 +76,12 @@
 - [x] TASK-051 Build disputes page (review draft, explicit send)
 - [x] TASK-052 Add loading/error/empty states
 
-## Phase 5 — Audit Engine
+## Phase 5 — Backend Audit/API Support
 
 - [x] TASK-053 Define canonical royalty schema
 - [x] TASK-054 Implement normalization
 - [x] TASK-055 Implement rate lookup (MySQL demo rates)
-- [x] TASK-056 Implement deterministic calculation (backend only)
+- [x] TASK-056 Implement deterministic calculation service (backend support/regression; not the primary n8n path)
 - [x] TASK-057 Implement discrepancy threshold
 - [x] TASK-058 Persist audit results
 - [x] TASK-059 Write calculation tests
@@ -91,17 +91,17 @@
 
 - [x] TASK-061 Create statement upload trigger workflow
 - [x] TASK-062 Connect n8n to backend (HTTP + shared secret)
-- [ ] TASK-063 Implement CSV extraction/ingestion
-- [ ] TASK-064 Submit normalized rows to backend
-- [ ] TASK-065 Invoke backend audit API (no n8n royalty math)
-- [ ] TASK-066 Handle discrepancy branch from backend response
-- [ ] TASK-067 Persist updates via backend API / webhooks
-- [ ] TASK-068 Add retries/error paths
-- [ ] TASK-069 Add idempotency handling
+- [ ] TASK-063 Extract and ingest supported CSV statements from Google Drive
+- [ ] TASK-064 Use AI extraction, validate canonical rows, and submit statement metadata/rows to backend
+- [ ] TASK-065 Retrieve applicable rates over HTTP and calculate expected payout/difference in n8n Code
+- [ ] TASK-066 Apply the configured discrepancy threshold and branch on the n8n calculation result
+- [x] TASK-067 Persist n8n-produced audit/discrepancy results through a backend API/webhook without backend recalculation
+- [x] TASK-068 Add bounded HTTP retries and terminal error paths
+- [x] TASK-069 Add source-file idempotency for statement, audit, and discrepancy persistence
 
 ## Phase 7 — AI
 
-- [ ] TASK-070 Define extraction prompt (optional for CSV; useful for classification)
+- [x] TASK-070 Define and apply Gemini extraction prompt (field mapping only)
 - [ ] TASK-071 Define structured output schema
 - [ ] TASK-072 Validate AI output
 - [ ] TASK-073 Define dispute-generation prompt

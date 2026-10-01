@@ -2,51 +2,58 @@
 
 **AI-Powered Music Royalty Audit & Dispute System (Capstone Demo)**
 
-RoyaltyGuard is a full-stack **demonstration** application that automates reviewing **fictional** royalty statements, calculating expected royalties, detecting discrepancies, and managing dispute follow-up. It does **not** process real payments or connect to live streaming APIs.
+RoyaltyGuard is a full-stack **demonstration** application for reviewing
+fictional royalty statements, calculating expected royalties, detecting
+discrepancies, and managing dispute follow-up. It does **not** process real
+payments or connect to live streaming APIs.
 
 ## Capstone Notice
 
-All artists, tracks, rates, statements, and payment figures are **demo/fake data** for education and demonstration. Demo rates are **not** official platform payout rates.
+All artists, tracks, rates, statements, and payment figures are **demo/fake
+data** for education and demonstration. Demo rates are **not** official
+platform payout rates.
 
 ## Architecture
 
 ```text
 React Frontend
       ↓
-Node + Express Backend  ← deterministic audit & royalty math
+Node + Express Backend  ← authentication, APIs & persistence
       ↓
-MySQL  (demo rates, statements, audits)
+MySQL  (statements, rows, audits, discrepancies)
       ↕
 n8n Automation
-   ├── AI (extract / draft)
-   ├── Gmail (after user approves send)
-   └── Backend API (normalization, audit, persist)
+   ├── Google Drive ingestion
+   ├── AI extraction / drafting
+   ├── HTTP rate provider → n8n Code calculation → threshold branch
+   └── Backend APIs (statement input and calculated-result persistence)
 ```
 
-Local filesystem stores uploaded statement files for MVP. Google Drive may be added later as an optional enhancement.
+The backend owns application data and persistence. The primary n8n audit
+retrieves applicable rates through a configured HTTP provider, performs
+deterministic calculation and discrepancy thresholding in a Code node, and
+returns the result for backend persistence. Existing backend calculation
+services remain for API support and regression tests; the primary n8n path does
+not call them for royalty math. AI may extract fields or draft text, but never
+calculates financial results. Local filesystem storage remains available for
+the MVP.
 
 ## Core Workflow
 
 ```text
-Simulated Platform Statement (CSV)
+Google Drive statement (CSV)
    ↓
-n8n ingestion
+Google Drive Trigger → Download → Extract From File
    ↓
-Normalize
+Information Extractor → canonical rows
    ↓
-Backend Audit Engine
+Backend statement / row intake
    ↓
-Royalty Calculation (backend)
+HTTP rate retrieval → n8n Code calculation → threshold branch
    ↓
-Discrepancy Detection
+Backend audit-result persistence (TASK-067)
    ↓
-Dashboard / Dispute draft (AI optional)
-   ↓
-User review → explicit send
-   ↓
-Email (n8n/Gmail)
-   ↓
-Follow-up / Escalation
+Dashboard / later user-reviewed dispute workflow
 ```
 
 ## Tech Stack
@@ -59,103 +66,33 @@ Follow-up / Escalation
 - Express
 - MySQL
 - n8n
-- AI/LLM
-- Gmail
+- AI/LLM for extraction and drafting only
+- Gmail after user approval
 
-## Sample Data (planned)
+## Sample Data
 
-Fictional CSVs under `sample-data/` (e.g. Spotify, Apple Music, YouTube Music, Audiomack) simulate platform statements—small and easy to explain in a capstone demo.
-
-## Project Structure
-
-```text
-royaltyguard/
-├── frontend/
-├── backend/
-├── n8n/
-├── database/
-├── sample-data/
-├── docs/
-├── PRD.md
-├── SYSTEM_ARCHITECTURE.md
-├── TECHNICAL_SPECIFICATION.md
-├── DATABASE_DESIGN.md
-├── API_SPECIFICATION.md
-├── AI_N8N_SPECIFICATION.md
-├── UI_UX_SPECIFICATION.md
-├── IMPLEMENTATION.md
-├── TESTING.md
-├── DECISIONS.md
-├── AGENTS.md
-├── TASKS.md
-└── README.md
-```
+Fictional CSVs under `sample-data/` (Spotify, Apple Music, YouTube Music, and
+Audiomack) simulate platform statements.
 
 ## Documentation
 
-| Document | Purpose |
-|---|---|
-| PRD.md | Product requirements |
-| SYSTEM_ARCHITECTURE.md | Architecture and data flow |
-| TECHNICAL_SPECIFICATION.md | Technical implementation rules |
-| DATABASE_DESIGN.md | MySQL schema |
-| API_SPECIFICATION.md | REST API contracts |
-| AI_N8N_SPECIFICATION.md | AI and n8n workflows |
-| UI_UX_SPECIFICATION.md | Frontend behavior |
-| IMPLEMENTATION.md | Build roadmap |
-| TESTING.md | Testing strategy |
-| DECISIONS.md | Architecture decisions |
-| AGENTS.md | AI coding-agent rules |
-| TASKS.md | Execution checklist |
+See `PRD.md`, `SYSTEM_ARCHITECTURE.md`, `TECHNICAL_SPECIFICATION.md`,
+`DATABASE_DESIGN.md`, `API_SPECIFICATION.md`, `AI_N8N_SPECIFICATION.md`,
+`UI_UX_SPECIFICATION.md`, `IMPLEMENTATION.md`, `TESTING.md`, `DECISIONS.md`,
+`AGENTS.md`, and `TASKS.md`.
 
 ## Local Development
 
-### Prerequisites
-
-Install:
-- Node.js
-- npm
-- MySQL
-- n8n
-- Git
-
-### Environment
-
-Create environment files from `.env.example`.
-
-Never commit secrets.
-
-## Development Order
-
-Follow:
-
-```text
-Documentation
- → Database
- → Backend
- → Frontend
- → Audit Engine
- → n8n
- → AI
- → Disputes
- → Testing
- → Deployment
-```
+Install Node.js, npm, MySQL, n8n, and Git. Create environment files from
+`.env.example`; never commit secrets.
 
 ## Engineering Principle
 
-**One workflow at a time.**
-
-Build → test → break → fix → improve.
-
-## Important Rule
-
-Financial calculations are deterministic.
-
-AI assists with extraction and language generation, but verified royalty inputs and financial calculations must remain under explicit application control.
+**One workflow at a time.** Financial calculations are deterministic and run
+in the primary n8n Code node. Backend calculation services remain available
+for non-primary support and testing.
 
 ## Project Status
 
-Capstone MVP is under development (documentation foundation complete; implementation in progress).
-
-See `TASKS.md` for the canonical implementation checklist.
+Capstone MVP is under development. See `TASKS.md` for the canonical
+implementation checklist.

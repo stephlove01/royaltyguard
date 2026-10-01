@@ -59,7 +59,9 @@ User
 | file_name | VARCHAR | Original file name |
 | file_type | VARCHAR | csv/pdf/etc. |
 | statement_period | VARCHAR | Period represented |
-| storage_location | TEXT | Local filesystem path (MVP) |
+| storage_location | TEXT | Local path or source URI (e.g. Google Drive) |
+| source_metadata | JSON | Optional source file ID, MIME type, location, and timestamps |
+| source_file_id | VARCHAR(255) NULL | Unique Google Drive idempotency key for n8n-created statements |
 | status | VARCHAR | Processing status |
 | created_at | DATETIME | Required |
 | updated_at | DATETIME | Required |
@@ -108,6 +110,8 @@ Suggested demo seed values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.00
 | created_at | DATETIME | Required |
 | updated_at | DATETIME | Required |
 
+`statement_id` has a unique key so retries update one audit per statement.
+
 ### discrepancies
 
 | Column | Type | Notes |
@@ -121,6 +125,9 @@ Suggested demo seed values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.00
 | threshold | DECIMAL | Applied threshold |
 | status | VARCHAR | Open/resolved/etc. |
 | created_at | DATETIME | Required |
+
+`(audit_id, royalty_row_id)` has a unique key so retries update one
+discrepancy per royalty row.
 
 ### disputes
 

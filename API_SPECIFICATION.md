@@ -104,13 +104,15 @@ statements both return `404`.
 
 ### POST /api/statements/:id/run-audit
 
-Requires JWT authentication and an owned statement. Runs the deterministic
-backend audit, persists the audit and discrepancies, and returns `200` with the
-audit and detected discrepancies. Repeated runs update the same audit and
-replace its generated discrepancy rows. A statement with no royalty rows, an
-invalid period, or any row without an applicable rate returns `422` and marks
-the audit failed; the response includes the audit and a reason. A statement
-that does not belong to the user returns `404`.
+This existing backend/API support endpoint requires JWT authentication and an
+owned statement. It runs the backend's deterministic audit service and
+persists its result for backend/API use and regression testing. It is **not**
+called by the primary n8n royalty-audit workflow, which retrieves a rate over
+HTTP and performs calculation/thresholding in n8n. Repeated backend runs update
+the same audit and replace generated discrepancy rows. A statement with no
+royalty rows, an invalid period, or any row without an applicable backend rate
+returns `422` and marks the audit failed. The backend calculation service is
+retained; it is not the normal n8n calculation path.
 
 Rates are selected by exact platform and territory first, then a platform-wide
 rate (`territory IS NULL`), using the latest rate effective on the statement
@@ -217,6 +219,139 @@ Successful response (`202`):
   }
 }
 ```
+
+### GET /api/webhooks/n8n/royalty-rate
+
+Rate-data-only endpoint for the primary n8n workflow. Requires the
+`X-N8N-Webhook-Secret` header. Query parameters:
+
+- `platform` (required)
+- `territory` (required)
+- `tier` (optional; must be empty because the current `royalty_rates` schema has no tier column)
+- `statementPeriod` (required; accepts `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, or `YYYY-QN`)
+
+The endpoint reuses the existing royalty-rate service. It selects an exact
+platform/territory rate before a platform-wide (`territory IS NULL`) rate and
+requires the effective date range to include the statement period start. It
+does not calculate payout, discrepancy, or threshold values.
+
+Example:
+
+```text
+GET /api/webhooks/n8n/royalty-rate?platform=Spotify&territory=NG&tier=&statementPeriod=2026-Q1
+```
+
+Successful response (`200`):
+
+```json
+{
+  "success": true,
+  "data": {
+    "platform": "Spotify",
+    "territory": "NG",
+    "rate": "0.004000",
+    "currency": "NGN",
+    "source": "demo_seed"
+  }
+}
+```
+
+No applicable rate returns `404` with `ROYALTY_RATE_NOT_FOUND`; a non-empty
+unsupported tier returns `422` with `TIER_RATE_NOT_SUPPORTED`.
+
+### POST /api/webhooks/n8n/statements
+
+Receives one extracted CSV statement with canonical royalty rows. Requires the
+`X-N8N-Webhook-Secret` header. The backend normalizes and validates every row,
+then creates the statement and royalty rows in one transaction. Access is
+restricted to the artist configured by `N8N_STATEMENT_ARTIST_ID`; callers
+cannot choose another artist in the request.
+
+Body:
+
+```json
+{
+  "platform": "Spotify",
+  "statementPeriod": "2026-Q1",
+  "rows": [
+    {
+      "trackName": "Test Track",
+      "eligibleUnits": "100000",
+      "territory": "NG",
+      "tier": null,
+      "actualPayout": "300.00"
+    }
+  ],
+  "sourceMetadata": {
+    "sourceFileId": "google-drive-file-id",
+    "fileName": "statement.csv",
+    "mimeType": "text/csv",
+    "sourceLocation": "https://drive.google.com/open?id=google-drive-file-id",
+    "createdTime": "2026-01-01T00:00:00.000Z",
+    "modifiedTime": "2026-01-01T00:00:00.000Z"
+  }
+}
+```
+
+Successful response (`201`) returns `data.statementId` and the persisted
+`data.sourceMetadata`. Missing artist configuration returns `503`; malformed
+rows return `400`. If `sourceMetadata.sourceFileId` has already been ingested,
+the endpoint returns `200` with the existing `statementId` and
+`idempotentReplay: true`; it does not insert duplicate statement/royalty rows.
+
+### POST /api/webhooks/n8n/statements/:id/run-audit
+
+Requires the `X-N8N-Webhook-Secret` header and a statement belonging to the
+configured `N8N_STATEMENT_ARTIST_ID`. It delegates to the same deterministic
+audit service as `POST /api/statements/:id/run-audit` and returns the same
+audit/discrepancy response shape. This compatibility endpoint remains
+available but must not be called by the primary n8n audit workflow.
+
+### POST /api/webhooks/n8n/audit-results
+
+Persists the primary n8n-generated audit result; it does **not** calculate,
+recalculate, or threshold any financial values. Requires
+`X-N8N-Webhook-Secret`. The request includes `statementId`, `sourceFileId`,
+precomputed statement totals, threshold, and the per-row rate/calculation /
+discrepancy fields. The backend verifies that the statement belongs to the
+source ID and that rows match the stored statement, then writes the supplied
+values to the existing `audits` and `discrepancies` tables in one transaction.
+
+Example body:
+
+```json
+{
+  "statementId": 54,
+  "sourceFileId": "google-drive-file-id",
+  "threshold": "0.00",
+  "totalExpected": "400.00",
+  "totalActual": "300.00",
+  "totalDifference": "100.00",
+  "results": [
+    {
+      "trackName": "Test Track",
+      "eligibleUnits": "100000",
+      "territory": "NG",
+      "tier": null,
+      "actualPayout": "300.00",
+      "rate": "0.004000",
+      "expectedPayout": "400.00",
+      "difference": "100.00",
+      "shortfall": "100.00",
+      "isDiscrepancy": true
+    }
+  ]
+}
+```
+
+Repeated requests update the same audit and discrepancy rows. Unique keys on
+`statements.source_file_id`, `audits.statement_id`, and
+`discrepancies(audit_id, royalty_row_id)` prevent duplicate persistent records.
+New/replayed valid writes return `200`; unknown statement/source pairs return
+`404`; mismatched stored rows return `409`; invalid payloads return `400`.
+
+The primary n8n path must call this endpoint after its threshold result. It
+must not call either `/run-audit` endpoint to compute financial values.
 
 Where n8n needs to notify the backend, use dedicated webhook endpoints such as:
 

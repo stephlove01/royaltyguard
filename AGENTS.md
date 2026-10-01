@@ -8,7 +8,7 @@ Stack:
 - React + TypeScript + Vite
 - Node.js + Express + TypeScript
 - MySQL (demo royalty rates)
-- n8n (ingestion/automation—not authoritative math)
+- n8n (ingestion, rate retrieval, primary deterministic royalty calculation, and automation)
 - AI/LLM (extract, classify, draft only)
 - Gmail (after user approves dispute send)
 - Local filesystem (MVP statement storage)
@@ -19,8 +19,9 @@ Stack:
 - Backend owns database access.
 - n8n owns workflow orchestration.
 - MySQL is the system of record.
-- **Backend** must perform all deterministic royalty calculations and discrepancy detection.
-- n8n and LLMs must not independently calculate financial results.
+- **n8n's Code node** performs the primary deterministic royalty calculation and discrepancy decision after retrieving an applicable rate.
+- The backend owns application/API/database responsibilities and persistence. Its existing calculation services may remain for API support, regression tests, or fallback, but the primary n8n workflow must not invoke them for royalty math.
+- AI/LLM nodes may extract or draft only; they must not calculate expected payout, shortfall, or discrepancy status.
 - AI must not perform authoritative financial calculations.
 - External integrations must be configurable.
 - Do not add payment gateways, OAuth (MVP), Redis, Kubernetes, or live streaming APIs unless explicitly approved.
@@ -65,7 +66,7 @@ All structured AI output must be validated.
 
 ## 6. Financial Rules
 
-Use deterministic calculations.
+Use deterministic calculations in the primary n8n audit path, with decimal-safe integer arithmetic. Keep the existing backend calculation implementation available for backend support and regression tests, but do not duplicate it in the normal n8n path.
 
 Do not replace code such as:
 

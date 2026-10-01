@@ -15,7 +15,7 @@ RoyaltyGuard uses a full-stack architecture with clear separation between the us
                ▼
 ┌──────────────────────────────┐
 │     Node.js + Express API    │
-│ Auth / Audit Engine / Math   │
+│ Auth / Statements / Persistence │
 └──────────────┬───────────────┘
                │
                ▼
@@ -27,15 +27,15 @@ RoyaltyGuard uses a full-stack architecture with clear separation between the us
                │
 ┌──────────────┴───────────────┐
 │             n8n              │
-│ Orchestration / Integrations │
+│ Orchestration / Audit / Integrations │
 └──────┬────────┬──────────────┘
        │        │
       AI      Gmail
        │
-   Backend REST (audit, rates, persist)
+   Rate API → n8n Code → Backend REST (persist)
 ```
 
-Statement files for MVP are stored on the **local filesystem** (paths recorded in MySQL).
+Frontend-uploaded statement files for MVP are stored on the **local filesystem**. Google Drive-triggered source files remain in Drive; the backend stores their source URI and metadata.
 
 ## 2. Components
 
@@ -62,9 +62,10 @@ Responsibilities:
 - Input validation.
 - Authentication/authorization.
 - Database access.
-- Business rules that belong in the application layer.
+- Application/API validation and authorization.
 - Local filesystem upload storage.
-- **Deterministic royalty calculation and discrepancy detection** (single source of truth for math).
+- Persist n8n-produced audit and discrepancy results through the protected TASK-067 backend API without recomputation.
+- Existing deterministic audit services for backend/API support, regression tests, and future fallback; these are not called for royalty math by the primary n8n workflow.
 - n8n integration endpoints/webhooks where required.
 
 ### Database
@@ -86,8 +87,10 @@ n8n is the automation/orchestration layer.
 Responsibilities:
 - Receive triggers.
 - Coordinate external services.
-- Invoke AI extraction/generation (non-authoritative for money).
-- Parse/ingest statement data and call **backend audit APIs** for rate lookup, calculation, and persistence.
+- Extract files and use the installed Information Extractor node to map statement fields into the canonical schema; validate its structured output.
+- Retrieve applicable platform/territory/period rates through the protected backend rate-data API; the current local adapter reads seeded demo rates through `royaltyRateService`.
+- Perform primary deterministic royalty calculations and discrepancy-threshold decisions in an n8n Code node and IF node. AI never performs financial math.
+- Submit statement metadata and normalized rows to the backend; persist computed audit results through `POST /api/webhooks/n8n/audit-results`.
 - Send Gmail messages **only after the user explicitly approves send** (typically triggered via backend → n8n).
 - Schedule follow-ups.
 - Handle retryable workflow failures.
@@ -114,14 +117,21 @@ Backend stores file (local) + metadata → MySQL
  ↓
 n8n trigger (ingestion)
  ↓
-Extract / Normalize (n8n; AI optional)
+Extract From File
  ↓
-Backend Audit Engine
-   ├── Rate lookup (MySQL demo rates)
-   ├── Deterministic calculation
-   └── Discrepancy detection
+Information Extractor → canonical rows
  ↓
-MySQL (rows, audit, discrepancies)
+Backend statement/row intake (metadata and inputs only)
+ ↓
+HTTP rate provider (platform + territory + tier + statement period)
+ ↓
+n8n Code (expected payout, difference, shortfall)
+ ↓
+IF threshold → discrepancy / no-discrepancy
+ ↓
+Backend persistence API for calculated results (TASK-067; future)
+ ↓
+MySQL (statements, rows, audits, discrepancies)
  ↓
 Frontend dashboard
 ```
@@ -145,12 +155,14 @@ Dispute status updated
 ## 4. Integration Boundaries
 
 **MVP external systems:**
-- Gmail (dispute email demo)
-- AI provider (extraction, classification, dispute drafting)
+- Google Drive (statement CSV trigger/source)
+- Protected backend rate-data endpoint (current local demo adapter; public production source remains unselected)
+- AI provider (statement extraction; later classification/dispute drafting)
+- Gmail for later user-approved dispute email
 
-**Not MVP:** live streaming platform APIs, payment gateways, Google Drive (optional future enhancement).
+**Not MVP:** live streaming platform APIs and payment gateways.
 
-Demo royalty rates live in **MySQL**, read by the backend during audits.
+The primary n8n workflow obtains rate data through `GET /api/webhooks/n8n/royalty-rate`, configured by `ROYALTYGUARD_RATE_API_URL`. The current local adapter reads seeded MySQL demo rates via `royaltyRateService` and returns rate data only; n8n performs the calculation and threshold decision. A public production rate source remains unselected.
 
 All external integrations must be isolated behind configurable credentials and integration modules/workflows.
 

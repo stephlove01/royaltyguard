@@ -95,7 +95,7 @@ export type RunAuditResult =
     }
   | { kind: 'completed'; audit: AuditRecord; discrepancies: DiscrepancyRecord[] }
 
-function periodStartDate(statementPeriod: string): string | null {
+export function periodStartDate(statementPeriod: string): string | null {
   let date: string | undefined
   const quarter = /^(\d{4})-Q([1-4])$/i.exec(statementPeriod)
 

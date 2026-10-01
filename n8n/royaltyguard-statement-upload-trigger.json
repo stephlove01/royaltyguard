@@ -10,7 +10,8 @@
             }
           ]
         },
-        "triggerOn": "fileCreated",
+        "triggerOn": "specificFolder",
+        "event": "fileCreated",
         "folderToWatch": {
           "__rl": true,
           "value": "={{$env.ROYALTYGUARD_STATEMENTS_FOLDER_ID}}",
@@ -20,7 +21,7 @@
       "id": "royaltyguard-google-drive-trigger",
       "name": "Google Drive Trigger",
       "type": "n8n-nodes-base.googleDriveTrigger",
-      "typeVersion": 1.1,
+      "typeVersion": 1,
       "position": [
         -640,
         0
@@ -33,9 +34,16 @@
     },
     {
       "parameters": {
+        "resource": "file",
         "operation": "download",
-        "fileId": "={{$json.id}}",
-        "options": {}
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json.id}}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
       },
       "id": "royaltyguard-download-statement",
       "name": "Get / Download Statement File",
@@ -53,7 +61,8 @@
     },
     {
       "parameters": {
-        "keepOnlySet": false,
+        "mode": "manual",
+        "includeOtherFields": true,
         "assignments": {
           "assignments": [
             {
@@ -82,7 +91,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "includeBinary": true
+        }
       },
       "id": "royaltyguard-prepare-metadata",
       "name": "Prepare Statement Metadata",
