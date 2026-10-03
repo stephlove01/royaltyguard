@@ -102,10 +102,10 @@
 ## Phase 7 — AI
 
 - [x] TASK-070 Define and apply Gemini extraction prompt (field mapping only)
-- [ ] TASK-071 Define structured output schema
-- [ ] TASK-072 Validate AI output
-- [ ] TASK-073 Define dispute-generation prompt
-- [ ] TASK-074 Prevent unsupported claims/invented facts
+- [x] TASK-071 Define structured output schema (strict rows wrapper; plays numeric, payout preserved as decimal text)
+- [x] TASK-072 Validate AI output against original CSV with deterministic workflow tests
+- [x] TASK-073 Define future Gemini dispute-generation prompt (draft only; no Agent node)
+- [x] TASK-074 Prevent unsupported claims/invented facts with verified/inference/unknown guardrails
 - [ ] TASK-075 Test AI failure cases
 
 ## Phase 8 — Disputes
