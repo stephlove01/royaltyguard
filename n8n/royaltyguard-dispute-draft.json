@@ -1,0 +1,186 @@
+{
+  "name": "RoyaltyGuard - Dispute Draft (Gemini)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "royaltyguard-dispute-draft",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "royaltyguard-dispute-draft-webhook",
+      "name": "Webhook - Request Dispute Draft",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        0
+      ],
+      "webhookId": "royaltyguard-dispute-draft"
+    },
+    {
+      "parameters": {
+        "jsCode": "const SECRET_HEADER = 'x-n8n-webhook-secret'\nconst FACT_KEYS = [\n  'discrepancyId',\n  'auditId',\n  'statementId',\n  'platform',\n  'statementPeriod',\n  'trackName',\n  'plays',\n  'territory',\n  'actualPayout',\n  'expectedPayout',\n  'difference',\n  'threshold',\n  'discrepancyStatus',\n  'artistName',\n]\n\nfunction readHeader(headers, name) {\n  if (!headers || typeof headers !== 'object') return undefined\n  const target = name.toLowerCase()\n  for (const key of Object.keys(headers)) {\n    if (key.toLowerCase() === target) {\n      const value = headers[key]\n      return Array.isArray(value) ? value[0] : value\n    }\n  }\n  return undefined\n}\n\nconst configuredSecret = $env.N8N_WEBHOOK_SECRET\nconst item = $input.first().json\nconst suppliedSecret = readHeader(item.headers || {}, SECRET_HEADER)\n\nif (!configuredSecret) throw new Error('N8N_WEBHOOK_SECRET is not configured')\nif (!suppliedSecret || suppliedSecret !== configuredSecret) {\n  throw new Error('Invalid or missing webhook secret')\n}\n\nconst body = item.body && typeof item.body === 'object' ? item.body : item\nconst facts = body.discrepancy\n\nif (!facts || typeof facts !== 'object' || Array.isArray(facts)) {\n  throw new Error('discrepancy facts are required')\n}\n\nconst missing = FACT_KEYS.filter(function (key) {\n  const value = facts[key]\n  return value === undefined || value === null || String(value).trim() === ''\n})\n\nif (missing.length > 0) {\n  throw new Error('discrepancy facts are missing: ' + missing.join(', '))\n}\n\nreturn [{ json: { facts: facts } }]"
+      },
+      "id": "royaltyguard-dispute-draft-validate-request",
+      "name": "Validate Draft Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const facts = $input.first().json.facts\n\nconst lines = [\n  'Write a professional, factual royalty-discrepancy message using ONLY the verified facts in the JSON below.',\n  'State only what the verified facts show. Do not present inferences as facts.',\n  'Do not calculate, round, or modify plays, actual payout, expected payout, difference, or any rate.',\n  'Do not invent or infer rates, contracts, payment dates, contractual obligations, distributor policies, previous correspondence, reference numbers, territories, tiers, legal conclusions, or currency conversions.',\n  'Omit unavailable details instead of filling them in.',\n  'Return only this JSON object: {\"subject\":\"string\",\"body\":\"string\",\"facts_used\":[],\"missing_information\":[]}',\n  'facts_used must list the exact verified fact key names used in the draft body.',\n  'missing_information may list requested context that was unavailable.',\n  'Verified facts:',\n  JSON.stringify(facts, null, 2),\n]\n\nreturn [{ json: { facts: facts, prompt: lines.join('\\n') } }]"
+      },
+      "id": "royaltyguard-dispute-draft-build-prompt",
+      "name": "Build Dispute Draft Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.prompt }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"additionalProperties\": false,\n  \"properties\": {\n    \"subject\": {\n      \"type\": \"string\",\n      \"description\": \"Professional email subject line for the royalty discrepancy request\"\n    },\n    \"body\": {\n      \"type\": \"string\",\n      \"description\": \"Draft message body text using only the supplied verified facts\"\n    },\n    \"facts_used\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Verified fact key names actually referenced in the draft\"\n    },\n    \"missing_information\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Requested context that was unavailable in the verified facts\"\n    }\n  },\n  \"required\": [\n    \"subject\",\n    \"body\",\n    \"facts_used\",\n    \"missing_information\"\n  ]\n}",
+        "options": {
+          "systemPromptTemplate": "You are drafting a royalty-discrepancy email. Use only the verified facts supplied in the input. Return only the schema-shaped object. facts_used must list the exact verified fact key names you referenced. Never calculate, round, or modify plays, actual payout, expected payout, difference, shortfall, or any rate. Never invent rates, contracts, payment dates, reference numbers, territories, tiers, legal conclusions, or previous correspondence. Omit unavailable details rather than filling them in."
+        }
+      },
+      "id": "royaltyguard-dispute-draft-extractor",
+      "name": "Information Extractor - Dispute Draft",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "id": "royaltyguard-dispute-draft-gemini",
+      "name": "Google Gemini Chat Model - Configure Credential",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        240
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const FACTS = $('Validate Draft Request').first().json.facts\nconst output = $input.first().json.output\n\nif (!output || typeof output !== 'object' || Array.isArray(output)) {\n  throw new Error('AI dispute draft must be an object')\n}\n\nconst allowedKeys = ['subject', 'body', 'facts_used', 'missing_information']\nfor (const key of Object.keys(output)) {\n  if (allowedKeys.indexOf(key) === -1) throw new Error('unsupported field ' + key)\n}\n\nconst subject = typeof output.subject === 'string' ? output.subject.trim() : ''\nconst body = typeof output.body === 'string' ? output.body.trim() : ''\nif (!subject || subject.length > 255) throw new Error('subject is required and must be 255 characters or fewer')\nif (!body || body.length > 20000) throw new Error('body is required and must be 20,000 characters or fewer')\n\nif (!Array.isArray(output.facts_used)) throw new Error('facts_used must be an array')\nif (!Array.isArray(output.missing_information)) throw new Error('missing_information must be an array')\n\nconst allowedFactKeys = Object.keys(FACTS)\nconst factsUsed = output.facts_used.map(function (value) {\n  const path = String(value).trim()\n  if (allowedFactKeys.indexOf(path) === -1) throw new Error('facts_used contains unsupported fact path ' + path)\n  return path\n})\n\nconst missingInformation = output.missing_information.map(function (value) {\n  return String(value).trim()\n})\n\nreturn [{\n  json: {\n    subject: subject,\n    body: body,\n    facts_used: factsUsed,\n    missing_information: missingInformation,\n  },\n}]"
+      },
+      "id": "royaltyguard-dispute-draft-validate-output",
+      "name": "Validate Draft Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "royaltyguard-dispute-draft-respond",
+      "name": "Respond - Dispute Draft",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook - Request Dispute Draft": {
+      "main": [
+        [
+          {
+            "node": "Validate Draft Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Draft Request": {
+      "main": [
+        [
+          {
+            "node": "Build Dispute Draft Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Dispute Draft Prompt": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor - Dispute Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model - Configure Credential": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor - Dispute Draft",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor - Dispute Draft": {
+      "main": [
+        [
+          {
+            "node": "Validate Draft Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Draft Output": {
+      "main": [
+        [
+          {
+            "node": "Respond - Dispute Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

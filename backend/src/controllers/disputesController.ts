@@ -8,7 +8,10 @@ import {
   markDisputeSent,
   releaseDisputeSend,
   reserveDisputeForSending,
+  updateDisputeDraftForUser,
 } from '../services/disputeService'
+import { createAiDisputeDraftForUser } from '../services/disputeDraftService'
+import { sendApprovedDispute } from '../services/disputeSendService'
 
 const positiveInteger = (value: unknown): boolean =>
   typeof value === 'string' &&
@@ -84,6 +87,37 @@ interface CreateDisputeBody {
   body: string
 }
 
+const recipientRule = {
+  type: 'string' as const,
+  required: true,
+  validate: (value: unknown) =>
+    typeof value === 'string' &&
+    value.length <= 255 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim()),
+  invalidMessage: 'recipient must be a valid email address of 255 characters or fewer',
+}
+
+const subjectRule = {
+  type: 'string' as const,
+  required: true,
+  validate: (value: unknown) => typeof value === 'string' && value.trim().length <= 255,
+  invalidMessage: 'subject must be 255 characters or fewer',
+}
+
+const bodyRule = {
+  type: 'string' as const,
+  required: true,
+  validate: (value: unknown) => typeof value === 'string' && value.trim().length <= 20000,
+  invalidMessage: 'body must be 20,000 characters or fewer',
+}
+
+export const validateCreateDisputeDraft = validateRequest({ recipient: recipientRule })
+
+export const validateUpdateDispute = validateRequest({
+  subject: subjectRule,
+  body: bodyRule,
+})
+
 function sendNotFound(res: Parameters<RequestHandler>[1]): void {
   res.status(404).json({
     success: false,
@@ -113,6 +147,58 @@ export const createDispute: RequestHandler = async (req, res, next) => {
     }
 
     res.status(201).json({ success: true, data: { dispute } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const createDisputeDraft: RequestHandler = async (req, res, next) => {
+  const userId = (req as AuthenticatedRequest).user.id
+  const discrepancyId = Number(req.params.id)
+  const { recipient } = req.body as { recipient: string }
+
+  try {
+    const result = await createAiDisputeDraftForUser({
+      discrepancyId,
+      userId,
+      recipient: recipient.trim(),
+    })
+
+    switch (result.kind) {
+      case 'created':
+        res.status(201).json({ success: true, data: { dispute: result.dispute } })
+        return
+      case 'discrepancy_not_found':
+        res.status(404).json({
+          success: false,
+          error: { code: 'DISCREPANCY_NOT_FOUND', message: 'Discrepancy not found' },
+        })
+        return
+      case 'not_configured':
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'DISPUTE_DRAFT_NOT_CONFIGURED',
+            message: 'AI dispute drafting is not configured',
+          },
+        })
+        return
+      case 'ai_failed':
+        res.status(502).json({
+          success: false,
+          error: {
+            code: 'DISPUTE_DRAFT_FAILED',
+            message: 'The AI dispute draft could not be generated',
+          },
+        })
+        return
+      case 'invalid_draft':
+        res.status(502).json({
+          success: false,
+          error: { code: 'DISPUTE_DRAFT_INVALID', message: result.message },
+        })
+        return
+    }
   } catch (error) {
     next(error)
   }
@@ -157,117 +243,93 @@ export const getDispute: RequestHandler = async (req, res, next) => {
   }
 }
 
-export const sendDispute: RequestHandler = async (req, res, next) => {
+export const updateDispute: RequestHandler = async (req, res, next) => {
   const userId = (req as AuthenticatedRequest).user.id
   const disputeId = Number(req.params.id)
-  let dispute
+  const body = req.body as { subject: string; body: string }
 
   try {
-    dispute = await getDisputeForUser(disputeId, userId)
-  } catch (error) {
-    next(error)
-    return
-  }
-
-  if (!dispute) {
-    sendNotFound(res)
-    return
-  }
-
-  const webhookUrl = process.env.N8N_DISPUTE_SEND_WEBHOOK_URL
-  const webhookSecret = process.env.N8N_WEBHOOK_SECRET
-
-  if (!webhookUrl || !webhookSecret) {
-    res.status(503).json({
-      success: false,
-      error: {
-        code: 'DISPUTE_SENDING_NOT_CONFIGURED',
-        message: 'Dispute sending is not configured',
-      },
+    const result = await updateDisputeDraftForUser({
+      disputeId,
+      userId,
+      subject: body.subject.trim(),
+      body: body.body.trim(),
     })
-    return
-  }
 
-  if (dispute.status !== 'draft') {
-    res.status(409).json({
-      success: false,
-      error: { code: 'DISPUTE_NOT_DRAFT', message: 'Only draft disputes can be sent' },
-    })
-    return
-  }
-
-  try {
-    if (!(await reserveDisputeForSending(disputeId, userId))) {
-      res.status(409).json({
-        success: false,
-        error: { code: 'DISPUTE_NOT_DRAFT', message: 'Only draft disputes can be sent' },
-      })
-      return
-    }
-  } catch (error) {
-    next(error)
-    return
-  }
-
-  let response: Response
-
-  try {
-    response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-N8N-Webhook-Secret': webhookSecret,
-      },
-      body: JSON.stringify({
-        idempotencyKey: `dispute-${dispute.id}`,
-        dispute: {
-          id: dispute.id,
-          recipient: dispute.recipient,
-          subject: dispute.subject,
-          body: dispute.body,
-        },
-      }),
-      signal: AbortSignal.timeout(10000),
-    })
-  } catch (error) {
-    try {
-      await releaseDisputeSend(disputeId, userId)
-    } catch (releaseError) {
-      next(releaseError)
-      return
-    }
-
-    res.status(503).json({
-      success: false,
-      error: { code: 'DISPUTE_SEND_FAILED', message: 'The dispute could not be sent' },
-    })
-    return
-  }
-
-  if (!response.ok) {
-    try {
-      await releaseDisputeSend(disputeId, userId)
-    } catch (error) {
-      next(error)
-      return
-    }
-
-    res.status(503).json({
-      success: false,
-      error: { code: 'DISPUTE_SEND_FAILED', message: 'The dispute could not be sent' },
-    })
-    return
-  }
-
-  try {
-    const sentDispute = await markDisputeSent(disputeId, userId)
-
-    if (!sentDispute) {
+    if (result === 'not_found') {
       sendNotFound(res)
       return
     }
 
-    res.status(200).json({ success: true, data: { dispute: sentDispute } })
+    if (result === 'not_draft') {
+      res.status(409).json({
+        success: false,
+        error: { code: 'DISPUTE_NOT_DRAFT', message: 'Only draft disputes can be edited' },
+      })
+      return
+    }
+
+    const dispute = await getDisputeForUser(disputeId, userId)
+
+    if (!dispute) {
+      sendNotFound(res)
+      return
+    }
+
+    res.status(200).json({ success: true, data: { dispute } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const sendDispute: RequestHandler = async (req, res, next) => {
+  const userId = (req as AuthenticatedRequest).user.id
+  const disputeId = Number(req.params.id)
+
+  try {
+    const outcome = await sendApprovedDispute(
+      {
+        getDispute: getDisputeForUser,
+        reserve: reserveDisputeForSending,
+        release: releaseDisputeSend,
+        markSent: markDisputeSent,
+        fetchImpl: fetch,
+        webhookUrl: process.env.N8N_DISPUTE_SEND_WEBHOOK_URL,
+        webhookSecret: process.env.N8N_WEBHOOK_SECRET,
+      },
+      disputeId,
+      userId,
+    )
+
+    switch (outcome.kind) {
+      case 'sent':
+        res.status(200).json({ success: true, data: { dispute: outcome.dispute } })
+        return
+      case 'not_found':
+        sendNotFound(res)
+        return
+      case 'not_draft':
+        res.status(409).json({
+          success: false,
+          error: { code: 'DISPUTE_NOT_DRAFT', message: 'Only draft disputes can be sent' },
+        })
+        return
+      case 'not_configured':
+        res.status(503).json({
+          success: false,
+          error: {
+            code: 'DISPUTE_SENDING_NOT_CONFIGURED',
+            message: 'Dispute sending is not configured',
+          },
+        })
+        return
+      case 'send_failed':
+        res.status(503).json({
+          success: false,
+          error: { code: 'DISPUTE_SEND_FAILED', message: 'The dispute could not be sent' },
+        })
+        return
+    }
   } catch (error) {
     next(error)
   }

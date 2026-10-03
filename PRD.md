@@ -108,7 +108,10 @@ The primary n8n audit calculates expected royalty in a deterministic Code node u
 The n8n workflow compares expected and actual payouts and applies the configured threshold before branching. AI does not calculate or decide financial results.
 
 ### FR-07 Dispute Generation
-The system generates a draft dispute containing the relevant statement period, tracks, calculations, discrepancy and supporting details.
+The system may generate a draft dispute from verified, persisted audit and
+discrepancy data, identifying the relevant statement period, platform, track,
+and supported calculations. The draft must not invent missing facts, rates,
+contract terms, or legal conclusions and must remain subject to user review.
 
 ### FR-08 Email Delivery
 After the user **reviews** a dispute draft and **explicitly triggers send**, the system can send the dispute email (e.g. via n8n/Gmail automation).

@@ -128,14 +128,16 @@ Exit criteria:
 ## Phase 8 — AI Integration
 
 Tasks:
-- Define and apply the Gemini statement-extraction prompt (TASK-070); keep structured-output schema validation in place.
-- Configure model.
-- Add structured output validation.
-- Add dispute drafting.
-- Add AI failure handling.
+- Define and apply the Gemini statement-extraction prompt (TASK-070).
+- Define the strict extractor output schema and validate every result against
+	original CSV data before canonical preparation (TASK-071/072).
+- Define the future Gemini dispute-generation prompt and verified-facts
+	guardrails (TASK-073/074); do not add the Agent or sending workflow here.
+- Configure the Gemini model and handle extraction validation failures.
 
 Exit criteria:
-- AI cannot silently change verified financial values.
+- AI cannot silently change source values, and future dispute drafts can use
+	only traceable verified facts.
 
 ## Phase 9 — Dispute Management
 

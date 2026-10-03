@@ -97,10 +97,13 @@ Responsibilities:
 
 ### AI
 AI is used for:
-- Unstructured statement extraction.
-- Normalization assistance.
-- Drafting dispute correspondence.
-- Classification/summarization.
+- Mapping statement CSV rows into a strict structured extraction shape; the
+    original CSV remains authoritative and deterministic validation runs before
+    rate retrieval or calculation.
+- Future dispute drafting from verified, persisted discrepancy/audit data and
+    existing application identity data only. Draft text is not sent without
+    explicit user review and approval.
+- Classification/summarization where appropriate.
 
 AI must not be the source of truth for financial arithmetic.
 
@@ -119,9 +122,10 @@ n8n trigger (ingestion)
  ↓
 Extract From File
  ↓
-Information Extractor → canonical rows
+Information Extractor → structured rows → deterministic source-CSV validation
  ↓
-Backend statement/row intake (metadata and inputs only)
+Canonical preparation uses original CSV values → backend statement/row intake
+(metadata and inputs only)
  ↓
 HTTP rate provider (platform + territory + tier + statement period)
  ↓
@@ -141,7 +145,9 @@ Frontend dashboard
 ```text
 Discrepancy
  ↓
-AI draft (optional) → saved as draft in MySQL
+Verified persisted audit/discrepancy facts + existing artist/account identity
+    ↓
+Future Gemini draft (draft only; traceable fact paths) → saved for review
  ↓
 User reviews draft in UI
  ↓
@@ -151,6 +157,12 @@ n8n / Gmail
  ↓
 Dispute status updated
 ```
+
+Future dispute text may state only verified supplied facts. Inferences must not
+be presented as facts, unknown values must be omitted or marked unavailable,
+and draft records must retain the originating audit/discrepancy identifiers
+and fact paths for traceability. No dispute-generation Agent or send workflow
+is part of TASK-071 through TASK-074.
 
 ## 4. Integration Boundaries
 

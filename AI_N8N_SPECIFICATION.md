@@ -84,10 +84,12 @@ The current local n8n 2.33.6 installation does not expose a node named
 manual JSON Schema mode and emits structured values in `json.output`. It
 requires a connected AI Language Model node and configured provider credential.
 
-The extractor maps source aliases into canonical fields and must preserve
-numeric text. Its instruction explicitly prohibits guessing missing fields or
-performing financial calculations. If required output is absent or invalid,
-the workflow stops before rate retrieval/calculation.
+The installed `@n8n/n8n-nodes-langchain` package is version `2.33.2` with n8n
+2.33.6. Information Extractor 1.2 accepts `schemaType: "manual"` and an
+`inputSchema` JSON Schema; its installed converter supports nested arrays,
+nullable fields, required fields, and closed objects. Extract From File emits
+one item per CSV row, and the extractor returns one structured result per input
+item. Each result therefore wraps exactly one source record in `rows`.
 
 ## 5. Canonical Schema
 
@@ -114,7 +116,11 @@ Use the existing canonical contract: `trackName`, `eligibleUnits`,
 Source aliases include `track_name`, `plays`, `streams`, and
 `actual_payout`. Unit and money values remain non-negative decimal strings;
 territory is normalized uppercase. `platform` and `statementPeriod` are
-statement-level fields.
+statement-level fields. The extractor's intermediate schema uses `plays` as a
+JSON number as required by TASK-071; after deterministic validation, the
+canonical preparation node takes plays and all other row values from the
+original CSV and maps plays to the existing `eligibleUnits` string. This is
+not an API or backend schema change.
 
 ## 6. Backend Statement/Row Intake
 
@@ -180,11 +186,11 @@ LLM, and do not invoke the backend audit-calculation endpoint afterward.
 
 ## 9. Later Dispute Automation
 
-The discrepancy branch is a future input to TASK-073+ dispute drafting. This
-correction does not add an AI dispute agent, Gmail send, Wait node, follow-up,
-or escalation. Later tasks may add user-approved Gmail delivery and a 30-day
-response-monitoring/follow-up path. Dispute email must remain behind explicit
-user approval as defined by the backend dispute API.
+TASK-073/074 define a future Gemini dispute-draft prompt contract, but do not
+add the AI Agent node, Gmail send, Wait node, follow-up, or escalation. The
+future draft may use only verified persisted discrepancy/audit fields and
+existing artist/account identity data. Sending remains behind explicit user
+approval as defined by the backend dispute API.
 
 ## 10. Webhook Security
 
@@ -203,10 +209,97 @@ statement for a replay; unique database keys enforce one statement source,
 one audit per statement, and one discrepancy per audit/royalty row. Replaying
 the result endpoint updates those records rather than creating duplicates.
 
-## 12. Gemini Extraction Prompt
+## 12. Gemini Extraction Contract (TASK-071/072)
 
-The existing Information Extractor prompt maps fields from the CSV row only,
-preserves units and payouts exactly, and returns empty values when source data
-is missing. `Validate AI Output Against CSV` rejects changed track, unit,
-territory, or payout values before normalization. AI does not supply rates or
-financial calculations.
+The Advanced AI Extract node uses this closed JSON Schema in its existing
+manual-schema configuration:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "trackName": { "type": "string" },
+          "plays": { "type": "integer", "minimum": 0 },
+          "territory": { "type": "string" },
+          "tier": { "type": ["string", "null"] },
+          "actualPayout": { "type": "string" }
+        },
+        "required": ["trackName", "plays", "territory", "actualPayout"]
+      }
+    }
+  },
+  "required": ["rows"]
+}
+```
+
+Each Information Extractor result must contain exactly one row because its
+input is one original CSV row. `Validate AI Output Against CSV` checks the
+output count, wrapper and row shape, required values, numeric plays, exact
+source payout, source track and territory, optional tier, and unsupported
+fields. It maps each AI item to its corresponding source item, so duplicate,
+missing, extra, or changed rows fail before canonical preparation, rate lookup,
+or calculation. Financial fields are never repaired from Gemini output.
+`Prepare Canonical Data` then uses the original CSV values, not AI values, for
+all canonical row fields. The validator is covered by deterministic tests
+that execute the JavaScript stored in the workflow export.
+
+## 13. Future Dispute Draft Prompt (TASK-073/074)
+
+The future Gemini dispute-generation Agent must receive only verified,
+persisted audit/discrepancy data and artist/account identity fields already
+stored by the application. Available verified fields may include audit,
+discrepancy, and statement identifiers; platform; statement period; territory;
+track name; plays; actual payout; expected payout; difference; shortfall;
+discrepancy status; and existing artist/account identity. Only values already
+present in persisted records may be supplied. The prompt input should
+distinguish `verifiedFacts`, `inferences`, and `unknownInformation`; only
+`verifiedFacts` may be stated as facts. An inference must not be presented as a
+fact. Unknown or unavailable values must be omitted or explicitly represented
+as unavailable, never fabricated.
+
+Prompt contract:
+
+```text
+Write a professional, factual royalty-discrepancy message using only the
+supplied verified facts. Identify the platform, statement period, territory,
+and track when supplied. Explain the persisted discrepancy and request an
+investigation, reconciliation, or payment correction where appropriate.
+
+Do not make threats, accusations, legal conclusions, or unsupported claims.
+Do not invent or infer rates, contracts, payment dates, contractual
+obligations, distributor policies, intentional underpayment, legal violations,
+previous correspondence, account/reference numbers, territories, tiers,
+financial values, tax information, or currency conversions. Do not calculate,
+round, or modify plays, actual payout, expected payout, difference, shortfall,
+or any rate. Omit unavailable details rather than filling them in.
+
+Return only this JSON object:
+{"subject":"string","body":"string","facts_used":[],"missing_information":[]}
+`facts_used` must list supplied verified field paths used in the draft;
+`missing_information` may list requested context that was unavailable. The
+body is a draft only and requires user review and explicit approval before
+send.
+```
+
+Expected output shape:
+
+```json
+{
+  "subject": "string",
+  "body": "string",
+  "facts_used": [],
+  "missing_information": []
+}
+```
+
+The future implementation must retain the originating audit and discrepancy
+record identifiers with the draft and its supplied fact paths so every claim
+can be traced to persisted evidence. No dispute Agent, send node, or API
+contract is added by TASK-071 through TASK-074.

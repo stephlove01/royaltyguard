@@ -224,3 +224,28 @@ This restores the original automation architecture while retaining backend owner
 
 ### Consequence
 Configure `ROYALTYGUARD_RATE_API_URL` for the primary audit; its local default is the secret-protected backend rate-data endpoint using the seeded MySQL demo rates through `royaltyRateService`. It returns rate data only. The separate `POST /api/webhooks/n8n/audit-results` contract persists calculated n8n results without recomputation and uses the source file ID for idempotency.
+
+---
+
+## ADR-016 — Source-Authoritative AI Extraction and Dispute Drafts
+
+**Status:** Accepted
+
+### Decision
+Gemini extraction uses a closed structured schema and is validated
+deterministically against each original CSV row. Canonical financial and row
+values are taken from the CSV after validation; AI output cannot repair or
+replace source plays or payout. Future dispute drafting may use only verified
+persisted audit/discrepancy facts and existing application identity data.
+
+### Reason
+Structured output alone does not establish source accuracy, and generated
+dispute text must not introduce unsupported financial, contractual, or legal
+claims.
+
+### Consequence
+Invalid, missing, extra, duplicate, or changed extraction rows stop before
+rate retrieval and calculation. Future drafts must distinguish verified
+facts, inferences, and unknown information, retain audit/discrepancy provenance,
+and remain drafts until explicit user approval. This decision adds no dispute
+Agent, Gmail node, or API contract.

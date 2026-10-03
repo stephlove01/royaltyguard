@@ -163,19 +163,16 @@ Provide `.env.example`; never commit `.env`.
 
 ## 9. AI Guardrails
 
-AI output must be schema-validated before being trusted by downstream logic.
-
-AI extraction should produce the canonical row fields and preserve monetary and
-unit values as strings:
+AI output must be schema-validated against the original source before any
+downstream processing. For the current Information Extractor 1.2 node, each
+source CSV item produces this strict intermediate row shape:
 
 ```json
 {
-  "platform": "demo_platform",
-  "statementPeriod": "2026-Q1",
   "rows": [
     {
       "trackName": "Example Track",
-      "eligibleUnits": "100000",
+      "plays": 100000,
       "territory": "NG",
       "tier": null,
       "actualPayout": "300.00"
@@ -184,7 +181,28 @@ unit values as strings:
 }
 ```
 
-If required fields are missing or invalid, the workflow should stop or route to review.
+`rows` is required, and each extractor result must wrap exactly one source row.
+The row requires `trackName`, non-negative integer `plays`, non-empty
+`territory`, and source-exact decimal-string `actualPayout`; `tier` is optional
+and nullable. Additional properties are rejected. Deterministic workflow
+validation matches each output to its original CSV item, rejects missing,
+extra, duplicate, or changed mappings and AI-calculated financial fields, and
+stops before rate retrieval/calculation on failure. The canonical backend row
+contract remains `eligibleUnits` as a decimal digit string. Canonical
+preparation reads that value and every other financial/row field from the
+original CSV, never repairing source data from AI output.
+
+Future dispute drafting may receive only verified, persisted audit and
+discrepancy facts plus existing artist/account identity information. Inputs
+must distinguish verified facts, inferences, and unknown information; only
+verified facts may be stated as facts. The draft must not invent rates,
+contracts, dates, obligations, policies, correspondence, identifiers,
+territories, tiers, money, taxes, or conversions, or make legal conclusions or
+accusations. It may not calculate or modify any financial value. Unavailable
+details are omitted or explicitly identified as unavailable. Draft output is
+`subject`, `body`, `facts_used`, and `missing_information`, remains draft-only,
+and must be traceable to its persisted audit/discrepancy records. No dispute
+Agent or send integration is added by TASK-071 through TASK-074.
 
 The backend remains responsible for authentication, statement metadata/row
 storage, APIs, and persistence of calculated results. The primary workflow

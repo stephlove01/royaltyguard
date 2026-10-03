@@ -91,10 +91,10 @@
 
 - [x] TASK-061 Create statement upload trigger workflow
 - [x] TASK-062 Connect n8n to backend (HTTP + shared secret)
-- [ ] TASK-063 Extract and ingest supported CSV statements from Google Drive
-- [ ] TASK-064 Use AI extraction, validate canonical rows, and submit statement metadata/rows to backend
-- [ ] TASK-065 Retrieve applicable rates over HTTP and calculate expected payout/difference in n8n Code
-- [ ] TASK-066 Apply the configured discrepancy threshold and branch on the n8n calculation result
+- [x] TASK-063 Extract and ingest supported CSV statements from Google Drive
+- [x] TASK-064 Use AI extraction, validate canonical rows, and submit statement metadata/rows to backend
+- [x] TASK-065 Retrieve applicable rates over HTTP and calculate expected payout/difference in n8n Code
+- [x] TASK-066 Apply the configured discrepancy threshold and branch on the n8n calculation result
 - [x] TASK-067 Persist n8n-produced audit/discrepancy results through a backend API/webhook without backend recalculation
 - [x] TASK-068 Add bounded HTTP retries and terminal error paths
 - [x] TASK-069 Add source-file idempotency for statement, audit, and discrepancy persistence
