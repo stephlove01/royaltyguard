@@ -159,7 +159,7 @@ provider can replace the configurable URL. Missing, malformed, or out-of-period
 rates must stop processing rather than default to zero.
 
 The current rate endpoint uses the seeded Spotify/Apple Music/YouTube
-Music/Audiomack rows in MySQL as an explicit local demo adapter. It returns
+Music/Amazon Music/Audiomack rows in MySQL as an explicit local demo adapter. It returns
 rate data only; n8n remains responsible for all payout/discrepancy math.
 
 ## 8. Deterministic n8n Calculation

@@ -55,7 +55,7 @@ User
 |---|---|---|
 | id | BIGINT | PK |
 | artist_id | BIGINT | FK |
-| platform | VARCHAR | Simulated source (e.g. Spotify, Apple Music, YouTube Music, Audiomack) |
+| platform | VARCHAR | Simulated source (e.g. Spotify, Apple Music, YouTube Music, Amazon Music, Audiomack) |
 | file_name | VARCHAR | Original file name |
 | file_type | VARCHAR | csv/pdf/etc. |
 | statement_period | VARCHAR | Period represented |
@@ -95,7 +95,7 @@ Stores **configurable demo rates** for capstone audits (not official platform pa
 | source | VARCHAR | e.g. `demo_seed` |
 | created_at | DATETIME | Required |
 
-Suggested demo seed values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002.
+Suggested demo seed values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Amazon Music 0.005, Audiomack 0.002.
 
 ### audits
 

@@ -9,6 +9,7 @@ import {
   getStatementById as findStatementById,
   listStatementsForUser,
 } from '../services/statementService'
+import { normalizePlatform } from '../services/normalizationService'
 import { getUserStatementFilePath } from '../utils/statementStorage'
 
 const statementIdRule = {
@@ -111,11 +112,25 @@ export const createStatement: RequestHandler = async (req, res, next) => {
     return
   }
 
+  let platform: string
+  try {
+    platform = normalizePlatform(body.platform)
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 'INVALID_PLATFORM',
+        message: error instanceof Error ? error.message : 'platform is invalid',
+      },
+    })
+    return
+  }
+
   try {
     const statement = await persistStatement({
       userId,
       artistId: body.artistId,
-      platform: body.platform.trim(),
+      platform,
       fileName: body.fileName.trim(),
       fileType,
       statementPeriod: body.statementPeriod.trim(),

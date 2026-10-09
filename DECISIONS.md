@@ -110,7 +110,7 @@ All UI and docs must distinguish demo data from real-world financial processing.
 **Status:** Accepted
 
 ### Decision
-Use platform names (Spotify, Apple Music, YouTube Music, Audiomack) for demonstration via fictional sample CSVs. Do not integrate live platform APIs.
+Use platform names (Spotify, Apple Music, YouTube Music, Amazon Music, Audiomack) for demonstration via fictional sample CSVs. Do not integrate live platform APIs.
 
 ### Reason
 Capstone focus is audit pipeline and software engineering, not platform partnerships.
@@ -125,7 +125,7 @@ Capstone focus is audit pipeline and software engineering, not platform partners
 **Status:** Accepted
 
 ### Decision
-Store configurable fictional demo rates in MySQL (example seeds: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002). Label them as non-official.
+Store configurable fictional demo rates in MySQL (example seeds: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Amazon Music 0.005, Audiomack 0.002). Label them as non-official.
 
 ### Reason
 Rates must be auditable and editable without implying real payout contracts.

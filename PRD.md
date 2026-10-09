@@ -53,7 +53,7 @@ RoyaltyGuard provides a structured workflow for ingestion, audit, discrepancy de
 ## 5. Non-Goals for MVP
 
 - Processing real payments or integrating payment gateways (Paystack, Flutterwave, Stripe, bank transfers, etc.).
-- Integrating with live Spotify, Apple Music, YouTube Music, Audiomack, or other streaming APIs.
+- Integrating with live Spotify, Apple Music, YouTube Music, Amazon Music, Audiomack, or other streaming APIs.
 - Becoming a payment processor.
 - Replacing legal counsel.
 - Guaranteeing that a detected discrepancy is contractually recoverable.
@@ -158,7 +158,7 @@ An MVP is acceptable when a test statement can be:
 
 ## 11. Assumptions
 
-- Streaming platforms (Spotify, Apple Music, YouTube Music, Audiomack, etc.) are **simulated data sources** represented by small fictional CSV statements in `sample-data/`.
+- Streaming platforms (Spotify, Apple Music, YouTube Music, Amazon Music, Audiomack, etc.) are **simulated data sources** represented by small fictional CSV statements in `sample-data/`.
 - The primary n8n audit retrieves rates through a configured HTTP rate-data API; its local adapter uses seeded MySQL demo rates. These rates are **not** official platform payout rates.
 - The initial MVP uses controlled fictional sample data.
 - Email is available through Gmail or another supported provider.
@@ -176,8 +176,8 @@ An MVP is acceptable when a test statement can be:
 ## 13. MVP Scope Recommendation
 
 Start with:
-- Fictional CSV statements per simulated platform (e.g. `spotify_statement.csv`, `apple_music_statement.csv`, `youtube_music_statement.csv`, `audiomack_statement.csv` under `sample-data/`).
-- Demo royalty rates in MySQL (example demo values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Audiomack 0.002—labeled as demo only).
+- Fictional CSV statements per simulated platform (e.g. `spotify_statement.csv`, `apple_music_statement.csv`, `youtube_music_statement.csv`, `amazon_music_statement.csv`, `audiomack_statement.csv` under `sample-data/`).
+- Demo royalty rates in MySQL (example demo values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Amazon Music 0.005, Audiomack 0.002—labeled as demo only).
 - n8n-owned deterministic calculation and discrepancy detection using an explicitly configured rate-provider endpoint.
 - One discrepancy threshold rule.
 - n8n for ingestion orchestration, AI-assisted extraction/drafting where useful, and email after user-approved send.

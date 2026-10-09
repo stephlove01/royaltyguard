@@ -8,8 +8,8 @@ function SectionPage({ title, eyebrow, description }: SectionPageProps) {
   return (
     <section className="page-enter max-w-5xl">
       <div className="mb-4 flex items-center gap-3">
-        <span className="h-px w-7 bg-signal" />
-        <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-pine">{eyebrow}</p>
+        <span className="h-px w-7 bg-brand-accent" />
+        <p className="text-[0.66rem] font-bold uppercase tracking-[0.2em] text-brand">{eyebrow}</p>
       </div>
       <h1 className="font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">
         {title}

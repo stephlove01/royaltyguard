@@ -5,13 +5,29 @@ import {
   RawRoyaltyStatement,
 } from './royaltySchema'
 
-const platformAliases: Record<string, string> = {
+export const CANONICAL_DEMO_PLATFORMS = [
+  'Spotify',
+  'Apple Music',
+  'YouTube Music',
+  'Amazon Music',
+  'Audiomack',
+] as const
+
+export type CanonicalDemoPlatform = (typeof CANONICAL_DEMO_PLATFORMS)[number]
+
+const platformAliases: Record<string, CanonicalDemoPlatform> = {
   spotify: 'Spotify',
   apple: 'Apple Music',
   'apple music': 'Apple Music',
-  audiomack: 'Audiomack',
   youtube: 'YouTube Music',
   'youtube music': 'YouTube Music',
+  amazon: 'Amazon Music',
+  'amazon music': 'Amazon Music',
+  audiomack: 'Audiomack',
+}
+
+export function isCanonicalDemoPlatform(value: string): value is CanonicalDemoPlatform {
+  return (CANONICAL_DEMO_PLATFORMS as readonly string[]).includes(value)
 }
 
 function readValue(input: RawRoyaltyRow, names: string[]): unknown {
@@ -49,7 +65,12 @@ function normalizeEligibleUnits(value: unknown): string {
 
 export function normalizePlatform(value: unknown): string {
   const normalized = normalizeText(value, 'platform')
-  return platformAliases[normalized.toLowerCase()] ?? normalized
+  const canonical = platformAliases[normalized.toLowerCase()]
+  if (canonical) return canonical
+
+  // Unknown names stay as entered (trimmed). Do not map them onto a demo
+  // platform; rate lookup will simply miss unless a matching rate exists.
+  return normalized
 }
 
 export function normalizeTerritory(value: unknown): string {

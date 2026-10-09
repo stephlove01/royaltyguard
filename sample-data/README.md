@@ -1,11 +1,21 @@
 # RoyaltyGuard — Sample Data
 
-Fictional demo assets for local development and capstone demos (see `PRD.md` and `TASKS.md`).
+Fictional demo assets for local development and capstone demos (see `PRD.md`).
 
 ## Purpose
 
-Simulated platform royalty statement CSVs (e.g. Spotify, Apple Music, YouTube Music, Audiomack) and related fixtures. All amounts, artists, and rates are **non-official** demo data.
+Simulated streaming-platform royalty statement CSVs. All artists, tracks, amounts, and rates are **non-official** demonstration data — not real platform payouts.
 
-## Status
+Supported demo platforms:
 
-Directory reserved. Sample CSVs are planned under **TASK-026**.
+| File | Canonical platform name |
+|---|---|
+| `spotify_statement.csv` | Spotify |
+| `apple_music_statement.csv` | Apple Music |
+| `youtube_music_statement.csv` | YouTube Music |
+| `amazon_music_statement.csv` | Amazon Music |
+| `audiomack_statement.csv` | Audiomack (existing fixture, still supported) |
+
+Schema for every CSV:
+
+`track_name,plays,territory,tier,actual_payout`

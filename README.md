@@ -71,8 +71,9 @@ Dashboard / later user-reviewed dispute workflow
 
 ## Sample Data
 
-Fictional CSVs under `sample-data/` (Spotify, Apple Music, YouTube Music, and
-Audiomack) simulate platform statements.
+Fictional CSVs under `sample-data/` (Spotify, Apple Music, YouTube Music,
+Amazon Music, and Audiomack) simulate platform statements. Demo rates and
+payouts are **not** official platform rates.
 
 ## Documentation
 
