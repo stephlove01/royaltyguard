@@ -12,6 +12,7 @@ Migrations use sequential numbering:
 - `009_add_statement_source_metadata.sql`
 - `010_add_n8n_result_idempotency.sql`
 - `012_add_amazon_music_demo_rate.sql`
+- `013_add_dispute_send_delivery_receipt.sql`
 
 ## Rules
 
@@ -24,6 +25,11 @@ Migrations use sequential numbering:
 Migration 010 adds the n8n source-file key and unique audit/discrepancy keys.
 When backfilling an existing repeated Drive file ID, only the earliest
 statement receives the key; existing statement rows are not deleted.
+
+Migration 013 records a send attempt and the n8n/Gmail receipt. Its
+`approved_at` column is retained for historical records; automatic delivery
+uses `send_uncertain` after an indeterminate outcome, and those records must
+be reconciled before any further action.
 
 Migration 012 inserts the fictional Amazon Music demo rate. Apply it on an
 existing database with:

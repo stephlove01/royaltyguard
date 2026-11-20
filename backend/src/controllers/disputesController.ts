@@ -6,12 +6,17 @@ import {
   getDisputeForUser,
   listDisputesForUser,
   markDisputeSent,
+  markDisputeSendUncertain,
   releaseDisputeSend,
   reserveDisputeForSending,
   updateDisputeDraftForUser,
 } from '../services/disputeService'
 import { createAiDisputeDraftForUser } from '../services/disputeDraftService'
-import { sendApprovedDispute } from '../services/disputeSendService'
+import {
+  buildDisputeWebhookUrl,
+  sendDisputeAutomatically,
+  type DisputeSendOutcome,
+} from '../services/disputeSendService'
 
 const positiveInteger = (value: unknown): boolean =>
   typeof value === 'string' &&
@@ -118,6 +123,32 @@ export const validateUpdateDispute = validateRequest({
   body: bodyRule,
 })
 
+function configuredDisputeWebhookUrl(): string | undefined {
+  return buildDisputeWebhookUrl(
+    process.env.N8N_BASE_URL,
+    process.env.N8N_DISPUTE_WEBHOOK_PATH,
+  )
+}
+
+function deliverDisputeAutomatically(disputeId: number, userId: number): Promise<DisputeSendOutcome> {
+  return sendDisputeAutomatically(
+    {
+      getDispute: getDisputeForUser,
+      reserve: reserveDisputeForSending,
+      release: releaseDisputeSend,
+      markUncertain: markDisputeSendUncertain,
+      markSent: markDisputeSent,
+      fetchImpl: fetch,
+      webhookUrl: configuredDisputeWebhookUrl(),
+      webhookSecret: process.env.N8N_WEBHOOK_SECRET,
+      webhookHeaderName: process.env.N8N_WEBHOOK_HEADER_NAME,
+      log: (entry) => console.info('[RoyaltyGuard dispute delivery]', entry),
+    },
+    disputeId,
+    userId,
+  )
+}
+
 function sendNotFound(res: Parameters<RequestHandler>[1]): void {
   res.status(404).json({
     success: false,
@@ -146,7 +177,9 @@ export const createDispute: RequestHandler = async (req, res, next) => {
       return
     }
 
-    res.status(201).json({ success: true, data: { dispute } })
+    const delivery = await deliverDisputeAutomatically(dispute.id, userId)
+    const deliveredDispute = delivery.kind === 'sent' ? delivery.dispute : await getDisputeForUser(dispute.id, userId)
+    res.status(201).json({ success: true, data: { dispute: deliveredDispute ?? dispute, delivery: delivery.kind } })
   } catch (error) {
     next(error)
   }
@@ -166,7 +199,16 @@ export const createDisputeDraft: RequestHandler = async (req, res, next) => {
 
     switch (result.kind) {
       case 'created':
-        res.status(201).json({ success: true, data: { dispute: result.dispute } })
+        {
+          const delivery = await deliverDisputeAutomatically(result.dispute.id, userId)
+          const dispute = delivery.kind === 'sent'
+            ? delivery.dispute
+            : await getDisputeForUser(result.dispute.id, userId)
+          res.status(201).json({
+            success: true,
+            data: { dispute: dispute ?? result.dispute, delivery: delivery.kind },
+          })
+        }
         return
       case 'discrepancy_not_found':
         res.status(404).json({
@@ -192,10 +234,31 @@ export const createDisputeDraft: RequestHandler = async (req, res, next) => {
           },
         })
         return
-      case 'invalid_draft':
+      case 'empty_response':
         res.status(502).json({
           success: false,
-          error: { code: 'DISPUTE_DRAFT_INVALID', message: result.message },
+          error: {
+            code: 'DISPUTE_DRAFT_EMPTY_RESPONSE',
+            message: 'The AI provider returned an empty dispute draft',
+          },
+        })
+        return
+      case 'invalid_json':
+        res.status(502).json({
+          success: false,
+          error: {
+            code: 'DISPUTE_DRAFT_INVALID_JSON',
+            message: 'The AI provider returned invalid JSON for the dispute draft',
+          },
+        })
+        return
+      case 'schema_invalid':
+        res.status(502).json({
+          success: false,
+          error: {
+            code: 'DISPUTE_DRAFT_SCHEMA_INVALID',
+            message: 'The AI provider response did not match the dispute draft schema',
+          },
         })
         return
     }
@@ -287,19 +350,7 @@ export const sendDispute: RequestHandler = async (req, res, next) => {
   const disputeId = Number(req.params.id)
 
   try {
-    const outcome = await sendApprovedDispute(
-      {
-        getDispute: getDisputeForUser,
-        reserve: reserveDisputeForSending,
-        release: releaseDisputeSend,
-        markSent: markDisputeSent,
-        fetchImpl: fetch,
-        webhookUrl: process.env.N8N_DISPUTE_SEND_WEBHOOK_URL,
-        webhookSecret: process.env.N8N_WEBHOOK_SECRET,
-      },
-      disputeId,
-      userId,
-    )
+    const outcome = await deliverDisputeAutomatically(disputeId, userId)
 
     switch (outcome.kind) {
       case 'sent':
@@ -323,10 +374,25 @@ export const sendDispute: RequestHandler = async (req, res, next) => {
           },
         })
         return
+      case 'ineligible':
+        res.status(409).json({
+          success: false,
+          error: { code: 'DISPUTE_NOT_ELIGIBLE', message: 'Required dispute or statement details are missing' },
+        })
+        return
       case 'send_failed':
         res.status(503).json({
           success: false,
           error: { code: 'DISPUTE_SEND_FAILED', message: 'The dispute could not be sent' },
+        })
+        return
+      case 'send_uncertain':
+        res.status(409).json({
+          success: false,
+          error: {
+            code: 'DISPUTE_SEND_UNCERTAIN',
+            message: 'Delivery could not be confirmed. The dispute is locked to prevent a duplicate send.',
+          },
         })
         return
     }

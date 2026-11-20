@@ -13,7 +13,6 @@ import {
   createDispute,
   generateDisputeDraft,
   getDiscrepancy,
-  updateDispute,
 } from '../services/royaltyguardApi'
 import type { DiscrepancyRecord } from '../services/royaltyguardApi'
 import { formatDate, formatDecimal } from '../utils/formatters'
@@ -47,10 +46,6 @@ function DiscrepancyDetailPage() {
   const [formError, setFormError] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-
-  const [aiGenerated, setAiGenerated] = useState(false)
-  const [generatedDisputeId, setGeneratedDisputeId] =
-    useState<number | null>(null)
 
   useEffect(() => {
     if (!validId) return
@@ -103,7 +98,6 @@ function DiscrepancyDetailPage() {
 
     setFormError('')
     setIsGenerating(true)
-    setAiGenerated(false)
 
     try {
       const dispute = await generateDisputeDraft(
@@ -111,11 +105,7 @@ function DiscrepancyDetailPage() {
         trimmedRecipient,
       )
 
-      setGeneratedDisputeId(dispute.id)
-      setRecipient(dispute.recipient)
-      setSubject(dispute.subject)
-      setBody(dispute.body)
-      setAiGenerated(true)
+      navigate(`/disputes/${dispute.id}`)
     } catch (requestError) {
       setFormError(
         getApiErrorMessage(
@@ -154,13 +144,6 @@ function DiscrepancyDetailPage() {
         recipient: trimmedRecipient,
         subject: trimmedSubject,
         body: trimmedBody,
-      }
-
-      if (generatedDisputeId !== null) {
-        await updateDispute(generatedDisputeId, input)
-
-        navigate(`/disputes/${generatedDisputeId}`)
-        return
       }
 
       const dispute = await createDispute({
@@ -344,8 +327,8 @@ function DiscrepancyDetailPage() {
                   </h2>
 
                   <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-                    Create a draft dispute from this evidence. You
-                    will review it before anything is sent.
+                    Create a dispute from this evidence. Eligible messages
+                    are delivered automatically through the configured Gmail workflow.
                   </p>
                 </div>
 
@@ -357,8 +340,8 @@ function DiscrepancyDetailPage() {
                   type="button"
                 >
                   {isFormOpen
-                    ? 'Close draft form'
-                    : 'Create dispute draft'}
+                    ? 'Close dispute form'
+                    : 'Create and deliver dispute'}
                 </button>
               </div>
 
@@ -380,7 +363,6 @@ function DiscrepancyDetailPage() {
                       id="recipient"
                       onChange={(event) => {
                         setRecipient(event.target.value)
-                        setAiGenerated(false)
                       }}
                       required
                       type="email"
@@ -396,9 +378,8 @@ function DiscrepancyDetailPage() {
                         </p>
 
                         <p className="mt-1 text-xs leading-5 text-muted">
-                          Generate a dispute using the verified
-                          royalty evidence. You can edit everything
-                          before saving.
+                          Generate and automatically deliver a dispute using
+                          the verified royalty evidence.
                         </p>
                       </div>
 
@@ -418,15 +399,6 @@ function DiscrepancyDetailPage() {
                       </button>
                     </div>
 
-                    {aiGenerated && (
-                      <p
-                        className="mt-3 text-xs font-medium text-brand"
-                        role="status"
-                      >
-                        AI draft generated. Review and edit it
-                        before saving.
-                      </p>
-                    )}
                   </div>
 
                   <div>
@@ -485,9 +457,7 @@ function DiscrepancyDetailPage() {
                   >
                     {isCreating
                       ? 'Saving draft...'
-                      : generatedDisputeId !== null
-                        ? 'Save AI draft for review'
-                        : 'Save draft for review'}
+                      : 'Save and deliver dispute'}
                   </button>
                 </form>
               )}

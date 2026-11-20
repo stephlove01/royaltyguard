@@ -182,16 +182,18 @@ Auth endpoints and JWT middleware are required in backend tasks.
 
 ## ADR-013 — Dispute Send Requires User Approval
 
-**Status:** Accepted
+**Status:** Superseded by ADR-017
 
 ### Decision
-AI may draft disputes; the user must review and explicitly trigger send before n8n/Gmail sends email.
+AI may draft disputes; the original decision required the user to review and
+explicitly trigger send before n8n/Gmail sent email.
 
 ### Reason
 Prevents automated sending of unreviewed correspondence in demos and mirrors responsible workflow design.
 
 ### Consequence
-Dispute status remains draft until user send action; n8n send branch runs after approval.
+The historical `approved_at` database field is retained for existing records.
+Automatic delivery follows ADR-017.
 
 ---
 
@@ -246,6 +248,30 @@ claims.
 ### Consequence
 Invalid, missing, extra, duplicate, or changed extraction rows stop before
 rate retrieval and calculation. Future drafts must distinguish verified
-facts, inferences, and unknown information, retain audit/discrepancy provenance,
-and remain drafts until explicit user approval. This decision adds no dispute
-Agent, Gmail node, or API contract.
+facts, inferences, and unknown information, and retain audit/discrepancy
+provenance. Eligible saved drafts may be automatically delivered under
+ADR-017. This decision adds no dispute Agent or n8n drafting node.
+
+---
+
+## ADR-017 — Automatic Delivery of Eligible Disputes
+
+**Status:** Accepted
+
+### Decision
+After a dispute message is generated and saved, the backend automatically
+triggers the existing protected n8n/Gmail delivery path only when the recipient,
+required evidence, open-underpayment status, and persisted threshold are valid.
+No separate send approval is required. The backend reserves each dispute once;
+n8n must not retry a Gmail send, and a missing message ID or indeterminate
+result is recorded as `send_uncertain` and is not resent automatically.
+
+### Reason
+The approved product behavior removes manual send approval while preserving
+evidence checks, duplicate protection, provider receipts, and safe handling of
+uncertain email outcomes.
+
+### Consequence
+The existing receipt columns from migration 013 are sufficient; no additional
+schema migration is required. The existing webhook URL slug is retained for
+compatibility, and escalation approval remains a separate workflow decision.

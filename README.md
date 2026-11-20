@@ -67,7 +67,7 @@ Dashboard / later user-reviewed dispute workflow
 - MySQL
 - n8n
 - AI/LLM for extraction and drafting only
-- Gmail after user approval
+- Gmail automatic delivery for eligible saved disputes
 
 ## Sample Data
 

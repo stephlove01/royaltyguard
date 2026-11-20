@@ -83,6 +83,10 @@ export interface DisputeRecord {
   followUpAt: string | null
   createdAt: string
   updatedAt: string
+  approvedAt?: string | null
+  sendAttemptedAt?: string | null
+  providerMessageId?: string | null
+  providerThreadId?: string | null
 
   // Linked discrepancy evidence
   difference?: string
@@ -368,17 +372,6 @@ export async function getDispute(
 ): Promise<DisputeRecord> {
   const response = await apiGet<DisputeResponse>(
     `/disputes/${disputeId}`,
-  )
-
-  return response.data.dispute
-}
-
-export async function sendDispute(
-  disputeId: number,
-): Promise<DisputeRecord> {
-  const response = await apiPost<DisputeResponse>(
-    `/disputes/${disputeId}/send`,
-    {},
   )
 
   return response.data.dispute

@@ -144,7 +144,7 @@ Exit criteria:
 Tasks:
 - Dispute API.
 - Draft UI.
-- Gmail integration (send only after user approval).
+- Automatic Gmail delivery for eligible saved disputes.
 - Send tracking.
 - Follow-up state.
 - Escalation.

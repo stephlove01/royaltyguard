@@ -1,5 +1,6 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2/promise'
 import { pool } from '../database'
+import type { SendReceipt } from './disputeSendService'
 
 export interface DisputeRecord extends RowDataPacket {
   id: number
@@ -15,6 +16,11 @@ export interface DisputeRecord extends RowDataPacket {
   sentAt: Date | null
   responseAt: Date | null
   followUpAt: Date | null
+  approvedAt: Date | null
+  sendAttemptedAt: Date | null
+  providerMessageId: string | null
+  providerThreadId: string | null
+  sendReceipt: Record<string, unknown> | null
   createdAt: Date
   updatedAt: Date
   difference?: string
@@ -28,6 +34,7 @@ export interface DisputeRecord extends RowDataPacket {
   statementId?: number
   platform?: string
   statementPeriod?: string
+  artistName?: string
 }
 
 export interface CreateDisputeInput {
@@ -72,6 +79,11 @@ const disputeColumns = `
   dp.sent_at AS sentAt,
   dp.response_at AS responseAt,
   dp.follow_up_at AS followUpAt,
+  dp.approved_at AS approvedAt,
+  dp.send_attempted_at AS sendAttemptedAt,
+  dp.provider_message_id AS providerMessageId,
+  dp.provider_thread_id AS providerThreadId,
+  dp.send_receipt AS sendReceipt,
   dp.created_at AS createdAt,
   dp.updated_at AS updatedAt,
   d.difference,
@@ -84,7 +96,8 @@ const disputeColumns = `
   r.territory,
   s.id AS statementId,
   s.platform,
-  s.statement_period AS statementPeriod
+  s.statement_period AS statementPeriod,
+  a.name AS artistName
 `
 
 const ownershipJoins = `
@@ -233,8 +246,11 @@ export async function reserveDisputeForSending(
     INNER JOIN audits AS au ON au.id = d.audit_id
     INNER JOIN statements AS s ON s.id = au.statement_id
     INNER JOIN artists AS a ON a.id = s.artist_id
-    SET dp.status = 'sending'
-    WHERE dp.id = ? AND a.user_id = ? AND dp.status = 'draft'`,
+    SET dp.status = 'sending',
+        dp.send_attempted_at = CURRENT_TIMESTAMP
+    WHERE dp.id = ? AND a.user_id = ? AND dp.status = 'draft'
+      AND dp.send_attempted_at IS NULL
+      AND d.status = 'open' AND d.difference > d.threshold`,
     [disputeId, userId],
   )
 
@@ -248,23 +264,53 @@ export async function releaseDisputeSend(disputeId: number, userId: number): Pro
     INNER JOIN audits AS au ON au.id = d.audit_id
     INNER JOIN statements AS s ON s.id = au.statement_id
     INNER JOIN artists AS a ON a.id = s.artist_id
-    SET dp.status = 'draft'
+    SET dp.status = 'send_failed'
     WHERE dp.id = ? AND a.user_id = ? AND dp.status = 'sending'`,
     [disputeId, userId],
   )
 }
 
-export async function markDisputeSent(disputeId: number, userId: number): Promise<DisputeRecord | null> {
+export async function markDisputeSendUncertain(disputeId: number, userId: number): Promise<void> {
   await pool.execute(
     `UPDATE disputes AS dp
     INNER JOIN discrepancies AS d ON d.id = dp.discrepancy_id
     INNER JOIN audits AS au ON au.id = d.audit_id
     INNER JOIN statements AS s ON s.id = au.statement_id
     INNER JOIN artists AS a ON a.id = s.artist_id
-    SET dp.status = 'sent', dp.sent_at = CURRENT_TIMESTAMP
+    SET dp.status = 'send_uncertain'
     WHERE dp.id = ? AND a.user_id = ? AND dp.status = 'sending'`,
     [disputeId, userId],
   )
+}
+
+export async function markDisputeSent(
+  disputeId: number,
+  userId: number,
+  receipt: SendReceipt,
+): Promise<DisputeRecord | null> {
+  const [result] = await pool.execute<ResultSetHeader>(
+    `UPDATE disputes AS dp
+    INNER JOIN discrepancies AS d ON d.id = dp.discrepancy_id
+    INNER JOIN audits AS au ON au.id = d.audit_id
+    INNER JOIN statements AS s ON s.id = au.statement_id
+    INNER JOIN artists AS a ON a.id = s.artist_id
+    SET dp.status = 'sent',
+        dp.sent_at = CURRENT_TIMESTAMP,
+        dp.send_attempted_at = COALESCE(dp.send_attempted_at, CURRENT_TIMESTAMP),
+        dp.provider_message_id = ?,
+        dp.provider_thread_id = ?,
+        dp.send_receipt = ?
+    WHERE dp.id = ? AND a.user_id = ? AND dp.status = 'sending'`,
+    [
+      receipt.messageId,
+      receipt.threadId ?? null,
+      JSON.stringify(receipt),
+      disputeId,
+      userId,
+    ],
+  )
+
+  if (result.affectedRows !== 1) return null
 
   return getDisputeForUser(disputeId, userId)
 }

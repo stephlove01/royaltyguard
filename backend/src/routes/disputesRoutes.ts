@@ -40,6 +40,11 @@ disputesRoutes.patch(
   updateDispute,
 )
 
-disputesRoutes.post('/:id/send', authenticateToken, validateDisputeId, sendDispute)
+disputesRoutes.post(
+  '/:id/send',
+  authenticateToken,
+  validateDisputeId,
+  sendDispute,
+)
 
 export default disputesRoutes

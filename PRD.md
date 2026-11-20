@@ -80,7 +80,7 @@ Detect Discrepancy
       ↓
 Generate Dispute
       ↓
-Review / Send
+Generate / Send Automatically
       ↓
 Track Response
       ↓
@@ -111,10 +111,11 @@ The n8n workflow compares expected and actual payouts and applies the configured
 The system may generate a draft dispute from verified, persisted audit and
 discrepancy data, identifying the relevant statement period, platform, track,
 and supported calculations. The draft must not invent missing facts, rates,
-contract terms, or legal conclusions and must remain subject to user review.
+contract terms, or legal conclusions. Eligible saved drafts are sent
+automatically under FR-08; no separate send approval is required.
 
 ### FR-08 Email Delivery
-After the user **reviews** a dispute draft and **explicitly triggers send**, the system can send the dispute email (e.g. via n8n/Gmail automation).
+After a valid discrepancy reaches the configured threshold and a dispute message with required details is generated, the system sends it through the configured n8n/Gmail automation.
 
 ### FR-09 Follow-Up
 The system tracks the follow-up date and can initiate a follow-up workflow.
@@ -180,7 +181,7 @@ Start with:
 - Demo royalty rates in MySQL (example demo values: Spotify 0.004, Apple Music 0.006, YouTube Music 0.003, Amazon Music 0.005, Audiomack 0.002—labeled as demo only).
 - n8n-owned deterministic calculation and discrepancy detection using an explicitly configured rate-provider endpoint.
 - One discrepancy threshold rule.
-- n8n for ingestion orchestration, AI-assisted extraction/drafting where useful, and email after user-approved send.
+- n8n for ingestion orchestration and email delivery; the backend drafts disputes with Gemini and triggers n8n automatically only for eligible saved disputes.
 - Simple auth: email, password (hashed), JWT.
 - Local filesystem statement storage.
 - Gmail (or test email) for dispute delivery demo.

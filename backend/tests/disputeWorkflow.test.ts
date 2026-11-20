@@ -31,7 +31,7 @@ function findNode(workflow: WorkflowDefinition, name: string) {
   return found
 }
 
-const sendValidateCode = findNode(sendWorkflow, 'Validate Approved Dispute').parameters.jsCode as string
+const sendValidateCode = findNode(sendWorkflow, 'Validate Automatic Dispute').parameters.jsCode as string
 const sendReceiptCode = findNode(sendWorkflow, 'Build Send Receipt').parameters.jsCode as string
 
 function sendRequest(overrides: {
@@ -43,11 +43,24 @@ function sendRequest(overrides: {
       headers: overrides.headers ?? { 'x-n8n-webhook-secret': 'shared-secret' },
       body: {
         idempotencyKey: 'dispute-7',
+        deliveryMode: 'automatic',
         dispute: {
           id: 7,
           recipient: 'royalties@example.com',
           subject: 'Royalty discrepancy',
           body: 'Please review the reported payout.',
+          artistName: 'Demo Artist',
+          platform: 'Spotify',
+          trackName: 'Sunset Echo',
+          statementPeriod: '2026-Q1',
+          audit: {
+            discrepancyId: 3,
+            discrepancyStatus: 'open',
+            expectedAmount: '600.00',
+            actualAmount: '450.00',
+            difference: '150.00',
+            threshold: '50.00',
+          },
         },
         ...overrides.body,
       },
@@ -70,12 +83,12 @@ function runSendValidate(
   return execute({ first: () => items[0], all: () => items }, env, () => staticData)
 }
 
-test('send workflow preserves the required approval chain and Gmail configuration', () => {
+test('send workflow validates automatic delivery and disables Gmail retries', () => {
   const names = sendWorkflow.nodes.map((node) => node.name)
   const expected = [
-    'Webhook - Approved Dispute Send',
-    'Validate Approved Dispute',
-    'Gmail - Send Approved Dispute',
+    'Webhook - Automatic Dispute Send',
+    'Validate Automatic Dispute',
+    'Gmail - Send Automatic Dispute',
     'Build Send Receipt',
     'Respond - Dispute Sent',
   ]
@@ -85,22 +98,23 @@ test('send workflow preserves the required approval chain and Gmail configuratio
   }
 
   assert.ok(
-    names.indexOf('Webhook - Approved Dispute Send') <
-      names.indexOf('Gmail - Send Approved Dispute'),
+    names.indexOf('Webhook - Automatic Dispute Send') <
+      names.indexOf('Gmail - Send Automatic Dispute'),
   )
 
-  const webhook = findNode(sendWorkflow, 'Webhook - Approved Dispute Send')
+  const webhook = findNode(sendWorkflow, 'Webhook - Automatic Dispute Send')
   assert.equal(webhook.parameters.httpMethod, 'POST')
   assert.equal(webhook.parameters.responseMode, 'responseNode')
 
-  const gmail = findNode(sendWorkflow, 'Gmail - Send Approved Dispute')
+  const gmail = findNode(sendWorkflow, 'Gmail - Send Automatic Dispute')
   assert.equal(gmail.type, 'n8n-nodes-base.gmail')
   assert.equal(gmail.credentials?.gmailOAuth2.name, 'Gmail account')
   assert.equal(gmail.parameters.sendTo, '={{ $json.recipient }}')
   assert.equal(gmail.parameters.subject, '={{ $json.subject }}')
   assert.equal(gmail.parameters.message, '={{ $json.message }}')
-  assert.equal(gmail.retryOnFail, true)
-  assert.equal(gmail.maxTries, 3)
+  assert.equal(gmail.retryOnFail, false)
+  assert.equal(gmail.maxTries, undefined)
+  assert.equal(findNode(sendWorkflow, 'Validate Automatic Dispute').parameters.jsCode.includes('expected - actual !== difference'), true)
 
   const serialized = JSON.stringify(sendWorkflow)
   assert.ok(!serialized.includes('replace_with_n8n_webhook_secret'), 'secret must not be hard-coded')
@@ -110,7 +124,7 @@ test('send workflow preserves the required approval chain and Gmail configuratio
   assert.ok(!serialized.includes('/api/webhooks/n8n/statements'))
 })
 
-test('validates an approved dispute payload and preserves its idempotency key', () => {
+test('validates an eligible automatic dispute payload and preserves its idempotency key', () => {
   const [result] = runSendValidate(sendRequest())
 
   assert.deepEqual(result.json, {
@@ -192,6 +206,59 @@ test('rejects an incomplete draft payload', () => {
   )
 })
 
+test('rejects non-automatic, incomplete, or below-threshold delivery payloads', () => {
+  assert.throws(
+    () => runSendValidate(sendRequest({ body: { deliveryMode: 'manual' } })),
+    /deliveryMode must be automatic/,
+  )
+
+  assert.throws(
+    () =>
+      runSendValidate(
+        sendRequest({
+          body: {
+            dispute: {
+              id: 7,
+              recipient: 'royalties@example.com',
+              subject: 'Royalty discrepancy',
+              body: 'Please review.',
+            },
+          },
+        }),
+      ),
+    /dispute.artistName is required/,
+  )
+
+  assert.throws(
+    () =>
+      runSendValidate(
+        sendRequest({
+          body: {
+            dispute: {
+              id: 7,
+              recipient: 'royalties@example.com',
+              subject: 'Royalty discrepancy',
+              body: 'Please review.',
+              artistName: 'Demo Artist',
+              platform: 'Spotify',
+              trackName: 'Sunset Echo',
+              statementPeriod: '2026-Q1',
+              audit: {
+                discrepancyId: 3,
+                discrepancyStatus: 'open',
+                expectedAmount: '600.00',
+                actualAmount: '450.00',
+                difference: '50.00',
+                threshold: '50.00',
+              },
+            },
+          },
+        }),
+      ),
+    /does not meet the recorded underpayment threshold/,
+  )
+})
+
 test('replays the stored receipt instead of re-sending for a repeated idempotency key', () => {
   const staticData: Record<string, unknown> = {
     sentReceipts: {
@@ -224,7 +291,7 @@ test('builds a structured Gmail send receipt and stores it for idempotency', () 
   const [receipt] = execute(
     { first: () => ({ json: { id: 'gmail-message-1', threadId: 'thread-1' } }) },
     (name: string) => {
-      assert.equal(name, 'Validate Approved Dispute')
+      assert.equal(name, 'Validate Automatic Dispute')
       return {
         first: () => ({
           json: {
@@ -243,6 +310,35 @@ test('builds a structured Gmail send receipt and stores it for idempotency', () 
   assert.equal(receipt.json.success, true)
   assert.equal(receipt.json.messageId, 'gmail-message-1')
   assert.equal(receipt.json.provider, 'gmail')
+  assert.equal((staticData.sentReceipts as Record<string, unknown>)['dispute-7'], receipt.json)
+})
+
+test('stores an uncertain receipt when Gmail does not return a message ID', () => {
+  const staticData: Record<string, unknown> = {}
+  const execute = new Function('$input', '$', '$getWorkflowStaticData', sendReceiptCode) as (
+    input: { first: () => WorkflowItem },
+    lookup: (name: string) => { first: () => WorkflowItem },
+    getStatic: (key: string) => Record<string, unknown>,
+  ) => WorkflowItem[]
+
+  const [receipt] = execute(
+    { first: () => ({ json: { threadId: 'thread-1' } }) },
+    () => ({
+      first: () => ({
+        json: {
+          idempotencyKey: 'dispute-7',
+          disputeId: 7,
+          recipient: 'royalties@example.com',
+          subject: 'Royalty discrepancy',
+        },
+      }),
+    }),
+    () => staticData,
+  )
+
+  assert.equal(receipt.json.success, false)
+  assert.equal(receipt.json.deliveryStatus, 'send_uncertain')
+  assert.equal(receipt.json.messageId, null)
   assert.equal((staticData.sentReceipts as Record<string, unknown>)['dispute-7'], receipt.json)
 })
 
@@ -434,4 +530,3 @@ test('draft output validation rejects missing or malformed fields', () => {
     /missing_information must be an array/,
   )
 })
-

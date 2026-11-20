@@ -173,17 +173,51 @@ optional `status`, `page`, and `limit` filters and standard pagination.
 
 Requires JWT authentication and returns the dispute and its discrepancy and
 statement summary. Inaccessible or missing disputes return `404`.
-User **explicitly** triggers send after reviewing the draft. The backend sends
-the dispute to the configured `N8N_DISPUTE_SEND_WEBHOOK_URL` with the
-`X-N8N-Webhook-Secret` header. A successful n8n response marks the dispute
-`sent`; a failed request leaves it as `draft`. If sending is not configured,
-the endpoint returns `503`. Only drafts can be sent; repeat sends return
-`409`. The outbound payload contains `idempotencyKey: "dispute-<id>"` so n8n
-can safely deduplicate delivery retries.
+
+### POST /api/disputes/:id/draft
+
+Requires JWT authentication and a `recipient` email. The backend assembles
+verified facts from persisted records owned by the authenticated user, asks
+Gemini for a draft, validates its strict `{ subject, body, facts_used,
+missing_information }` response, then saves it for review. `facts_used` must
+contain exact supported camelCase fact paths (including `auditId` and
+`discrepancyId`). The backend requests `application/json` output with a schema
+matching those four fields, then validates the result again before saving.
+Configure `GEMINI_API_KEY` server-side; `GEMINI_MODEL` defaults to
+`gemini-3.8-flash`. Missing configuration returns `503`. Provider failure,
+empty response, invalid JSON, and schema-invalid output return distinct `502`
+error codes (`DISPUTE_DRAFT_FAILED`, `DISPUTE_DRAFT_EMPTY_RESPONSE`,
+`DISPUTE_DRAFT_INVALID_JSON`, and `DISPUTE_DRAFT_SCHEMA_INVALID`) without
+saving a draft.
+
+Saving a valid generated dispute automatically triggers the n8n/Gmail delivery
+workflow. The backend sends the saved record to
+`N8N_BASE_URL + N8N_DISPUTE_WEBHOOK_PATH`, using the header named by
+`N8N_WEBHOOK_HEADER_NAME` and the server-only `N8N_WEBHOOK_SECRET`. A dispute
+is marked `sent` only when n8n returns `success: true`, `provider: "gmail"`, a
+non-empty message ID, and matching `disputeId` and `idempotencyKey`. The active
+workflow's `Respond - Send Receipt` does not include `deliveryStatus`; the
+backend accepts that field when present only if it is `"sent"`. The backend
+uses the production `/webhook/` route (a bare webhook slug is normalized to
+that route) and the
+`X-N8N-Webhook-Secret` header expected by the active workflow; it rejects a
+test route or mismatched header configuration before making the request.
+Delivery diagnostics log the dispute ID, destination host/path, HTTP status,
+elapsed time, and safe error category only—not credentials, recipient, subject,
+or message content. Definitive pre-send client errors become `send_failed`;
+a timeout, upstream server error, or response without a valid receipt/message
+ID sets `send_uncertain` and permanently blocks automatic resend. The backend
+also refuses to reserve a draft with an existing `send_attempted_at` value,
+even if its status is still `draft`, preventing a stale or interrupted attempt
+from being sent again. The backend reserves each saved dispute atomically, and
+n8n stores its receipt by `idempotencyKey: "dispute-<id>"`. The Gmail node must
+not retry on failure.
 
 ### POST /api/disputes/:id/send
 
-User **explicitly** triggers send after reviewing the draft. Backend coordinates email (e.g. n8n/Gmail). Must not send without this action.
+Requires JWT authentication. This endpoint remains available for authenticated
+operational recovery; normal delivery is triggered automatically when a dispute
+is created and it does not require an approval body.
 
 ## 8. Webhooks / n8n
 

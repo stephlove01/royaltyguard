@@ -125,8 +125,7 @@ export function parseAiDisputeDraft(value: unknown): ParsedAiDisputeDraft {
   }
 }
 
-// n8n may respond with the draft directly, under `output` (Information Extractor),
-// or nested under `draft`. Normalise before validating.
+// Retained to normalize draft-shaped payloads from integrations and tests.
 export function extractAiDisputeDraftPayload(payload: unknown): unknown {
   if (isPlainObject(payload)) {
     if (typeof payload.subject === 'string') return payload

@@ -10,7 +10,7 @@ Stack:
 - MySQL (demo royalty rates)
 - n8n (ingestion, rate retrieval, primary deterministic royalty calculation, and automation)
 - AI/LLM (extract, classify, draft only)
-- Gmail (after user approves dispute send)
+- Gmail (automatic delivery for eligible disputes)
 - Local filesystem (MVP statement storage)
 
 ## 2. Architecture Rules

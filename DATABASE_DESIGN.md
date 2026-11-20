@@ -138,7 +138,12 @@ discrepancy per royalty row.
 | recipient | VARCHAR | Recipient |
 | subject | VARCHAR | Email subject |
 | body | TEXT | Draft/sent content |
-| status | VARCHAR | Draft/sent/responded/escalated |
+| status | VARCHAR | Draft/sending/send_failed/send_uncertain/sent/responded/escalated |
+| approved_at | DATETIME | Historical manual-approval time, retained for existing records |
+| send_attempted_at | DATETIME | Time the backend submitted the idempotent request |
+| provider_message_id | VARCHAR | Gmail message identifier returned by n8n |
+| provider_thread_id | VARCHAR | Gmail thread identifier returned by n8n |
+| send_receipt | JSON | Verified n8n/Gmail delivery receipt |
 | sent_at | DATETIME | Optional |
 | response_at | DATETIME | Optional |
 | follow_up_at | DATETIME | Optional |

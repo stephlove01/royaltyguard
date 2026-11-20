@@ -186,11 +186,18 @@ LLM, and do not invoke the backend audit-calculation endpoint afterward.
 
 ## 9. Later Dispute Automation
 
-TASK-073/074 define a future Gemini dispute-draft prompt contract, but do not
-add the AI Agent node, Gmail send, Wait node, follow-up, or escalation. The
-future draft may use only verified persisted discrepancy/audit fields and
-existing artist/account identity data. Sending remains behind explicit user
-approval as defined by the backend dispute API.
+The backend generates dispute drafts directly with Google's Gemini API. It
+assembles only verified persisted discrepancy/audit facts for the authenticated
+owner and validates the strict draft response and exact camelCase `facts_used`
+paths before saving. Configure `GEMINI_API_KEY` and optionally `GEMINI_MODEL`
+in the backend environment. The exported
+`n8n/royaltyguard-dispute-draft.json` is a historical workflow artifact and is
+not part of the active draft path.
+
+n8n remains responsible for email delivery only. After an authenticated request
+generates and saves a draft, the backend automatically sends it only when the
+recipient, required evidence, open-underpayment status, and persisted threshold
+are valid. No separate approval or send action is required.
 
 ## 10. Webhook Security
 
@@ -284,8 +291,7 @@ Return only this JSON object:
 {"subject":"string","body":"string","facts_used":[],"missing_information":[]}
 `facts_used` must list supplied verified field paths used in the draft;
 `missing_information` may list requested context that was unavailable. The
-body is a draft only and requires user review and explicit approval before
-send.
+body is a draft; once saved, eligible disputes are automatically sent by n8n.
 ```
 
 Expected output shape:
@@ -303,3 +309,32 @@ The future implementation must retain the originating audit and discrepancy
 record identifiers with the draft and its supplied fact paths so every claim
 can be traced to persisted evidence. No dispute Agent, send node, or API
 contract is added by TASK-071 through TASK-074.
+
+## 14. Multi-platform audit and automatic-dispute workflow (TASK-085)
+
+The importable combined export is `n8n/royaltyguard-multiplatform-audit-dispute.json`.
+The Google Drive entry accepts CSV and PDF statements, validates platform and
+period metadata, normalizes source rows with the installed Information
+Extractor node, and rejects uncertain or source-mismatched financial values.
+The existing backend statement and rate endpoints remain protected; rate
+fallback values are permitted only for files explicitly marked as synthetic
+demos. The Code node performs all expected-payout and discrepancy arithmetic
+using integer values. A PDF pass is marked for manual review because extracted
+text alone cannot prove row-to-value relationships.
+
+The separate dispute-send webhook is called by the backend after it saves an
+eligible generated dispute. It validates the Header Auth credential
+`RoyaltyGuard Webhook Secret` and payload, sends through the configured Gmail
+credential without automatic node retries, and returns a receipt only when
+Gmail supplies a message ID. Missing receipts or provider errors are treated as
+uncertain and are not resent. The workflow then waits one minute and checks the
+sent thread. The distinct escalation path still requires approval. Reply-check
+failures route to review and never to escalation. The workflow does not call
+the authenticated draft endpoint or store user JWTs. Reply and escalation
+outcomes remain in n8n execution data because the backend currently has no
+persistence contract for them.
+
+See `n8n/README.md` for the required credential and environment configuration,
+the import procedure, and the synthetic-fixture-only test path. TASK-085
+automated tests validate the export and fail-closed decisions; TASK-086 still
+requires import and end-to-end execution in the configured n8n instance.

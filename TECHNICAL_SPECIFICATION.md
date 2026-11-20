@@ -12,7 +12,7 @@ Capstone/demo system: fictional financial data, no real payments, no live stream
 | Database | MySQL |
 | Automation | n8n |
 | AI | LLM through n8n/backend integration |
-| Email | Gmail (dispute send after user approval) |
+| Email | Gmail (automatic delivery for eligible saved disputes) |
 | File Storage | Local filesystem (MVP) |
 | Authentication | Email + password (hashed) + JWT |
 | API Testing | Postman |
@@ -192,17 +192,19 @@ contract remains `eligibleUnits` as a decimal digit string. Canonical
 preparation reads that value and every other financial/row field from the
 original CSV, never repairing source data from AI output.
 
-Future dispute drafting may receive only verified, persisted audit and
-discrepancy facts plus existing artist/account identity information. Inputs
-must distinguish verified facts, inferences, and unknown information; only
+Backend dispute drafting receives only verified, persisted audit and
+discrepancy facts plus existing artist/account identity information. Only
 verified facts may be stated as facts. The draft must not invent rates,
 contracts, dates, obligations, policies, correspondence, identifiers,
 territories, tiers, money, taxes, or conversions, or make legal conclusions or
 accusations. It may not calculate or modify any financial value. Unavailable
 details are omitted or explicitly identified as unavailable. Draft output is
 `subject`, `body`, `facts_used`, and `missing_information`, remains draft-only,
-and must be traceable to its persisted audit/discrepancy records. No dispute
-Agent or send integration is added by TASK-071 through TASK-074.
+and must be traceable to its persisted audit/discrepancy records. `facts_used`
+contains exact supported camelCase fact paths. After a valid draft is saved,
+the backend automatically triggers n8n delivery only when the recipient,
+required evidence, open-underpayment status, and configured threshold are valid.
+AI does not decide eligibility or calculate financial results.
 
 The backend remains responsible for authentication, statement metadata/row
 storage, APIs, and persistence of calculated results. The primary workflow

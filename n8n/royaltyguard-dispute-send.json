@@ -9,7 +9,7 @@
         "options": {}
       },
       "id": "royaltyguard-dispute-send-webhook",
-      "name": "Webhook - Approved Dispute Send",
+      "name": "Webhook - Automatic Dispute Send",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -20,10 +20,10 @@
     },
     {
       "parameters": {
-        "jsCode": "const SECRET_HEADER = 'x-n8n-webhook-secret'\n\nfunction readHeader(headers, name) {\n  if (!headers || typeof headers !== 'object') return undefined\n  const target = name.toLowerCase()\n  for (const key of Object.keys(headers)) {\n    if (key.toLowerCase() === target) {\n      const value = headers[key]\n      return Array.isArray(value) ? value[0] : value\n    }\n  }\n  return undefined\n}\n\nconst configuredSecret = $env.N8N_WEBHOOK_SECRET\nconst item = $input.first().json\nconst suppliedSecret = readHeader(item.headers || {}, SECRET_HEADER)\n\nif (!configuredSecret) throw new Error('N8N_WEBHOOK_SECRET is not configured')\nif (!suppliedSecret || suppliedSecret !== configuredSecret) {\n  throw new Error('Invalid or missing webhook secret')\n}\n\nconst body = item.body && typeof item.body === 'object' ? item.body : item\nconst dispute = body.dispute\nconst idempotencyKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : ''\n\nif (!idempotencyKey) throw new Error('idempotencyKey is required')\nif (!dispute || typeof dispute !== 'object') throw new Error('dispute payload is required')\n\nconst recipient = typeof dispute.recipient === 'string' ? dispute.recipient.trim() : ''\nconst subject = typeof dispute.subject === 'string' ? dispute.subject.trim() : ''\nconst message = typeof dispute.body === 'string' ? dispute.body.trim() : ''\nconst disputeId = dispute.id\n\nif (!Number.isInteger(disputeId) || disputeId <= 0) {\n  throw new Error('dispute.id must be a positive integer')\n}\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) {\n  throw new Error('dispute.recipient must be a valid email address')\n}\nif (!subject || subject.length > 255) {\n  throw new Error('dispute.subject is required and must be 255 characters or fewer')\n}\nif (!message || message.length > 20000) {\n  throw new Error('dispute.body is required and must be 20,000 characters or fewer')\n}\n\nconst staticData = $getWorkflowStaticData('global')\nif (!staticData.sentReceipts || typeof staticData.sentReceipts !== 'object') {\n  staticData.sentReceipts = {}\n}\n\nconst existing = staticData.sentReceipts[idempotencyKey]\nif (existing) {\n  return [{ json: Object.assign({}, existing, { idempotentReplay: true }) }]\n}\n\nreturn [{\n  json: {\n    idempotencyKey: idempotencyKey,\n    disputeId: disputeId,\n    recipient: recipient,\n    subject: subject,\n    message: message,\n    idempotentReplay: false,\n  },\n}]"
+        "jsCode": "const SECRET_HEADER = 'x-n8n-webhook-secret'\n\nfunction readHeader(headers, name) {\n  if (!headers || typeof headers !== 'object') return undefined\n  const target = name.toLowerCase()\n  for (const key of Object.keys(headers)) {\n    if (key.toLowerCase() === target) {\n      const value = headers[key]\n      return Array.isArray(value) ? value[0] : value\n    }\n  }\n  return undefined\n}\n\nfunction decimalCents(value, name) {\n  if (typeof value !== 'string') throw new Error(name + ' must be a decimal string')\n  const match = /^(-?)(0|[1-9]\\d*)(?:\\.(\\d{1,2}))?$/.exec(value.trim())\n  if (!match) throw new Error(name + ' must be a valid amount with at most two decimal places')\n  const cents = BigInt(match[2]) * 100n + BigInt((match[3] || '').padEnd(2, '0') || '0')\n  return match[1] ? -cents : cents\n}\n\nconst configuredSecret = $env.N8N_WEBHOOK_SECRET\nconst item = $input.first().json\nconst suppliedSecret = readHeader(item.headers || {}, SECRET_HEADER)\nif (!configuredSecret) throw new Error('N8N_WEBHOOK_SECRET is not configured')\nif (!suppliedSecret || suppliedSecret !== configuredSecret) throw new Error('Invalid or missing webhook secret')\n\nconst body = item.body && typeof item.body === 'object' ? item.body : item\nconst dispute = body.dispute\nconst idempotencyKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : ''\nif (body.deliveryMode !== 'automatic') throw new Error('deliveryMode must be automatic')\nif (!idempotencyKey) throw new Error('idempotencyKey is required')\nif (!dispute || typeof dispute !== 'object') throw new Error('dispute payload is required')\n\nconst recipient = typeof dispute.recipient === 'string' ? dispute.recipient.trim() : ''\nconst subject = typeof dispute.subject === 'string' ? dispute.subject.trim() : ''\nconst message = typeof dispute.body === 'string' ? dispute.body.trim() : ''\nconst disputeId = dispute.id\nif (!Number.isSafeInteger(disputeId) || disputeId <= 0) throw new Error('dispute.id must be a positive integer')\nif (idempotencyKey !== 'dispute-' + disputeId) throw new Error('idempotencyKey must match dispute.id')\nif (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient)) throw new Error('dispute.recipient must be a valid email address')\nif (!subject || subject.length > 255) throw new Error('dispute.subject is required and must be 255 characters or fewer')\nif (!message || message.length > 20000) throw new Error('dispute.body is required and must be 20,000 characters or fewer')\nfor (const field of ['artistName', 'platform', 'trackName', 'statementPeriod']) {\n  if (typeof dispute[field] !== 'string' || !dispute[field].trim()) throw new Error('dispute.' + field + ' is required')\n}\n\nconst audit = dispute.audit\nif (!audit || typeof audit !== 'object' || !Number.isSafeInteger(audit.discrepancyId) || audit.discrepancyId <= 0) {\n  throw new Error('dispute.audit with discrepancyId is required')\n}\nif (audit.discrepancyStatus !== 'open') throw new Error('dispute discrepancy must be open')\nconst expected = decimalCents(audit.expectedAmount, 'expectedAmount')\nconst actual = decimalCents(audit.actualAmount, 'actualAmount')\nconst difference = decimalCents(audit.difference, 'difference')\nconst threshold = decimalCents(audit.threshold, 'threshold')\nif (expected <= actual || expected - actual !== difference || difference <= threshold) {\n  throw new Error('dispute does not meet the recorded underpayment threshold')\n}\n\nconst staticData = $getWorkflowStaticData('global')\nif (!staticData.sentReceipts || typeof staticData.sentReceipts !== 'object') staticData.sentReceipts = {}\nconst existing = staticData.sentReceipts[idempotencyKey]\nif (existing) return [{ json: Object.assign({}, existing, { idempotentReplay: true }) }]\nreturn [{ json: { idempotencyKey, disputeId, recipient, subject, message, idempotentReplay: false } }]"
       },
       "id": "royaltyguard-dispute-send-validate",
-      "name": "Validate Approved Dispute",
+      "name": "Validate Automatic Dispute",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -76,7 +76,7 @@
         "options": {}
       },
       "id": "royaltyguard-dispute-send-gmail",
-      "name": "Gmail - Send Approved Dispute",
+      "name": "Gmail - Send Automatic Dispute",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
@@ -88,14 +88,12 @@
           "name": "Gmail account"
         }
       },
-      "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 2000,
+      "retryOnFail": false,
       "onError": "stopWorkflow"
     },
     {
       "parameters": {
-        "jsCode": "const validated = $('Validate Approved Dispute').first().json\nconst gmail = $input.first().json\n\nconst receipt = {\n  success: true,\n  idempotencyKey: validated.idempotencyKey,\n  disputeId: validated.disputeId,\n  recipient: validated.recipient,\n  subject: validated.subject,\n  messageId: gmail.id || null,\n  threadId: gmail.threadId || null,\n  provider: 'gmail',\n  sentAt: new Date().toISOString(),\n}\n\nconst staticData = $getWorkflowStaticData('global')\nif (!staticData.sentReceipts || typeof staticData.sentReceipts !== 'object') {\n  staticData.sentReceipts = {}\n}\nstaticData.sentReceipts[receipt.idempotencyKey] = receipt\n\nreturn [{ json: receipt }]"
+        "jsCode": "const validated = $('Validate Automatic Dispute').first().json\nconst gmail = $input.first().json\nconst messageId = typeof gmail.id === 'string' && gmail.id.trim() ? gmail.id.trim() : null\nconst receipt = {\n  success: Boolean(messageId),\n  deliveryStatus: messageId ? 'sent' : 'send_uncertain',\n  idempotencyKey: validated.idempotencyKey,\n  disputeId: validated.disputeId,\n  recipient: validated.recipient,\n  subject: validated.subject,\n  messageId,\n  threadId: typeof gmail.threadId === 'string' ? gmail.threadId : null,\n  provider: 'gmail',\n  sentAt: messageId ? new Date().toISOString() : null,\n}\nconst staticData = $getWorkflowStaticData('global')\nif (!staticData.sentReceipts || typeof staticData.sentReceipts !== 'object') staticData.sentReceipts = {}\nstaticData.sentReceipts[receipt.idempotencyKey] = receipt\nreturn [{ json: receipt }]"
       },
       "id": "royaltyguard-dispute-send-receipt",
       "name": "Build Send Receipt",
@@ -123,28 +121,6 @@
     }
   ],
   "connections": {
-    "Webhook - Approved Dispute Send": {
-      "main": [
-        [
-          {
-            "node": "Validate Approved Dispute",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Approved Dispute": {
-      "main": [
-        [
-          {
-            "node": "Already Sent?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Already Sent?": {
       "main": [
         [
@@ -156,18 +132,7 @@
         ],
         [
           {
-            "node": "Gmail - Send Approved Dispute",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gmail - Send Approved Dispute": {
-      "main": [
-        [
-          {
-            "node": "Build Send Receipt",
+            "node": "Gmail - Send Automatic Dispute",
             "type": "main",
             "index": 0
           }
@@ -179,6 +144,39 @@
         [
           {
             "node": "Respond - Dispute Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Automatic Dispute Send": {
+      "main": [
+        [
+          {
+            "node": "Validate Automatic Dispute",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Automatic Dispute": {
+      "main": [
+        [
+          {
+            "node": "Already Sent?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Send Automatic Dispute": {
+      "main": [
+        [
+          {
+            "node": "Build Send Receipt",
             "type": "main",
             "index": 0
           }

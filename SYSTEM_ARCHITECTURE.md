@@ -91,7 +91,7 @@ Responsibilities:
 - Retrieve applicable platform/territory/period rates through the protected backend rate-data API; the current local adapter reads seeded demo rates through `royaltyRateService`.
 - Perform primary deterministic royalty calculations and discrepancy-threshold decisions in an n8n Code node and IF node. AI never performs financial math.
 - Submit statement metadata and normalized rows to the backend; persist computed audit results through `POST /api/webhooks/n8n/audit-results`.
-- Send Gmail messages **only after the user explicitly approves send** (typically triggered via backend → n8n).
+- Send Gmail messages after the authenticated backend saves an eligible dispute with a recipient and complete statement evidence.
 - Schedule follow-ups.
 - Handle retryable workflow failures.
 
@@ -100,9 +100,10 @@ AI is used for:
 - Mapping statement CSV rows into a strict structured extraction shape; the
     original CSV remains authoritative and deterministic validation runs before
     rate retrieval or calculation.
-- Future dispute drafting from verified, persisted discrepancy/audit data and
-    existing application identity data only. Draft text is not sent without
-    explicit user review and approval.
+- Backend Gemini dispute drafting from verified, persisted
+  discrepancy/audit data and existing application identity data only. Draft
+  text is validated and persisted before eligible underpayment disputes are
+  automatically delivered.
 - Classification/summarization where appropriate.
 
 AI must not be the source of truth for financial arithmetic.
@@ -147,15 +148,15 @@ Discrepancy
  ↓
 Verified persisted audit/discrepancy facts + existing artist/account identity
     ↓
-Future Gemini draft (draft only; traceable fact paths) → saved for review
+     Backend Gemini draft (traceable fact paths) → saved
  ↓
-User reviews draft in UI
+ Backend verifies recipient, required evidence, open discrepancy status, and threshold
  ↓
-User explicitly triggers send (API)
+ Backend reserves the dispute and triggers n8n delivery once
  ↓
 n8n / Gmail
  ↓
-Dispute status updated
+Verified Gmail message ID and delivery status persisted
 ```
 
 Future dispute text may state only verified supplied facts. Inferences must not
@@ -169,8 +170,8 @@ is part of TASK-071 through TASK-074.
 **MVP external systems:**
 - Google Drive (statement CSV trigger/source)
 - Protected backend rate-data endpoint (current local demo adapter; public production source remains unselected)
-- AI provider (statement extraction; later classification/dispute drafting)
-- Gmail for later user-approved dispute email
+- AI provider (statement extraction in n8n; dispute drafting in backend)
+- Gmail for automatic eligible-dispute email delivery
 
 **Not MVP:** live streaming platform APIs and payment gateways.
 
