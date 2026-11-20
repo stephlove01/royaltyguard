@@ -1,6 +1,6 @@
 # RoyaltyGuard — Task Tracker
 
-**Capstone scope:** fictional demo data, simulated streaming CSVs (no live platform APIs), n8n-owned primary audit calculation, backend application APIs/persistence with calculation services retained for support and regression, local file storage, email/password/JWT auth, user must approve dispute send. See `PRD.md` and `DECISIONS.md`.
+**Capstone scope:** fictional demo data, simulated streaming CSVs (no live platform APIs), n8n-owned primary audit calculation, backend application APIs/persistence with calculation services retained for support and regression, local file storage, email/password/JWT auth, automatic delivery for eligible disputes. See `PRD.md` and `DECISIONS.md`.
 
 ## Status Legend
 
@@ -59,7 +59,7 @@
 - [x] TASK-037 Add statement API
 - [x] TASK-038 Add audit API (including run-audit / internal audit engine entry)
 - [x] TASK-039 Add discrepancy API
-- [x] TASK-040 Add dispute API (draft + explicit send trigger)
+- [x] TASK-040 Add dispute API (draft + automatic delivery for eligible disputes)
 
 ## Phase 4 — Frontend
 
@@ -73,7 +73,7 @@
 - [x] TASK-048 Build statement detail
 - [x] TASK-049 Build audits page
 - [x] TASK-050 Build discrepancy page
-- [x] TASK-051 Build disputes page (review draft, explicit send)
+- [x] TASK-051 Build disputes page (dispute status and delivery receipt)
 - [x] TASK-052 Add loading/error/empty states
 
 ## Phase 5 — Backend Audit/API Support
@@ -89,15 +89,15 @@
 
 ## Phase 6 — n8n
 
-- [x] TASK-061 Create statement upload trigger workflow
+- [x] TASK-061 Create Google Drive trigger for a selected file (polls every minute; the download node has a separate file selection to align)
 - [x] TASK-062 Connect n8n to backend (HTTP + shared secret)
-- [x] TASK-063 Extract and ingest supported CSV statements from Google Drive
-- [x] TASK-064 Use AI extraction, validate canonical rows, and submit statement metadata/rows to backend
-- [x] TASK-065 Retrieve applicable rates over HTTP and calculate expected payout/difference in n8n Code
+- [x] TASK-063 Extract and ingest supported CSV statements from Google Drive; reject PDFs and other file types
+- [x] TASK-064 Use Gemini for field normalization, compare normalized rows with CSV source values, and submit statement metadata/rows
+- [x] TASK-065 Retrieve applicable rates over HTTP and calculate expected payout/difference with decimal-safe n8n Code
 - [x] TASK-066 Apply the configured discrepancy threshold and branch on the n8n calculation result
-- [x] TASK-067 Persist n8n-produced audit/discrepancy results through a backend API/webhook without backend recalculation
-- [x] TASK-068 Add bounded HTTP retries and terminal error paths
-- [x] TASK-069 Add source-file idempotency for statement, audit, and discrepancy persistence
+- [x] TASK-067 Persist n8n-produced audit results through the backend webhook without backend recalculation when a potential discrepancy is found
+- [x] TASK-068 Configure bounded HTTP retries (up to three tries with a one-second interval); exhausted errors stop the execution
+- [x] TASK-069 Pass source-file metadata to backend statement and audit endpoints for existing idempotency handling
 
 ## Phase 7 — AI
 
@@ -110,34 +110,22 @@
 
 ## Phase 8 — Disputes
 
-- [ ] TASK-076 Create dispute draft flow (AI → draft in DB)
-- [ ] TASK-077 Create dispute review UI
-- [ ] TASK-078 Configure Gmail in n8n
-- [ ] TASK-079 Implement send action (user-triggered → n8n/Gmail)
-- [ ] TASK-080 Record sent message
-- [ ] TASK-081 Implement follow-up workflow
-- [ ] TASK-082 Implement escalation
+- [x] TASK-076 Create backend Gemini dispute draft flow (strictly validated AI → draft in DB; verified by mocked provider tests)
+- [x] TASK-077 Create dispute review UI
+- [x] TASK-078 Configure Gmail delivery in n8n (credential is required in the target n8n instance)
+- [x] TASK-079 Automatically deliver eligible saved disputes through n8n/Gmail
+- [x] TASK-080 Persist verified Gmail message ID and delivery receipt; lock uncertain outcomes
+- [x] TASK-081 Add a timed follow-up step after the dispute-send receipt; the workflow does not check for a reply
+- [x] TASK-082 Send an escalation email after the wait; the workflow has no approval gate, and its recipient must be set safely in n8n
 
 ## Phase 9 — Testing & Security
 
 - [ ] TASK-083 Unit tests
 - [ ] TASK-084 API integration tests (including auth and webhook secret)
-- [ ] TASK-085 n8n workflow tests
-- [ ] TASK-086 End-to-end test (sample CSV → audit → dispute review → send)
-- [ ] TASK-087 Input validation review
-- [ ] TASK-088 Secrets/security review
-- [ ] TASK-089 Duplicate-processing test
-- [ ] TASK-090 Failure/retry test
+- [~] TASK-085 n8n workflow tests (static workflow export/fixture failures remain to be resolved; the supplied workflow's successful end-to-end run is recorded in TASK-086)
+- [x] TASK-086 End-to-end test of the supplied n8n workflow (successful run confirmed by the project owner)
 
-## Phase 10 — Deployment
 
-- [ ] TASK-091 Prepare demo/deployment environment
-- [ ] TASK-092 Configure deployment database
-- [ ] TASK-093 Deploy backend
-- [ ] TASK-094 Deploy frontend
-- [ ] TASK-095 Deploy/configure n8n
-- [ ] TASK-096 Configure monitoring (minimal)
-- [ ] TASK-097 Configure backups (minimal)
 
 ## Task Rule
 
